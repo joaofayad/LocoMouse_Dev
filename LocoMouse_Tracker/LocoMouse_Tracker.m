@@ -1,6 +1,6 @@
 function varargout = LocoMouse_Tracker(varargin)
 % LOCOMOUSE_TRACKER MATLAB code for LocoMouse_Tracker.fig
-% The Locomouse_Tracker GUI tracks a list of video files once it is given a
+% The LocoMouse_Tracker GUI tracks a list of video files once it is given a
 % background search method, a calibration file, a model file, an output
 % folder parsing method and an output folder.
 %

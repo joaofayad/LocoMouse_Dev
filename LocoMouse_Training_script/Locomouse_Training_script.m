@@ -1,5 +1,5 @@
-% Locomouse Training
-% This code uses the hand labelled data provided by Locomouse_Labelling to
+% LocoMouse Training
+% This code uses the hand labelled data provided by LocoMouse_Labelling to
 % train image detectors for the chosen features. Detectors are trained
 % using a linear Support Vector Machine (SVM). This code uses the LIBSVM
 % library (http://www.csie.ntu.edu.tw/~cjlin/libsvm/index.html) but the
@@ -15,7 +15,7 @@
 %% User defined parameters:
 % I) Defining the dataset:
 % A dataset is defined by a set of videos and the corresponding hand
-% labelled data as provided by Locomouse_Labelling.
+% labelled data as provided by LocoMouse_Labelling.
 % 
 % The LocoMouse_Labelling code follows a predefined naming scheme where if
 % a video is named L7Y10_control1.avi then it expects by default the
