@@ -1,11 +1,15 @@
-function [tracks_final,tracks_tail,OcclusionGrid,bounding_box,flip,data,debug] = MTF_rawdata(data, model)
+function [tracks_final,tracks_tail,OcclusionGrid,bounding_box,data,debug] = MTF_rawdata(data, model)
 % MTF   Tracks a set of predefined (mouse) features over a given video.
 %
 % INPUT:
 % data: Data stuff
-%
 % model: Models for detection
-%
+%----------------------------
+% notes: data.flip indicates
+%        false - mouse in original video faces right
+%        true - mouse in original video faces left
+%        if field empty non-existent = auto detection of mouse orientation
+%-----------------------------
 % This method relies on predefined (or trained) detectors that are specific
 % for each feature to be tracked. Features can be either point features
 % (e.g. paws, snout) or area features (e.g. tail).
@@ -32,8 +36,9 @@ function [tracks_final,tracks_tail,OcclusionGrid,bounding_box,flip,data,debug] =
 % each image is kept.
 %
 % Author: Joao Fayad (joao.fayad@neuro.fchampalimaud.org)
+% Later adjustments by: Hugo Marques (HGM), Dennis Eckmeier (DE)
 % Created: 15/10/2013
-% Last Modified: 17/11/2014
+% Last Modified: 28/10/2015 [DE]
 
 %% Pre-processing the video to extract important quantities:
 if ischar(data.vid)
@@ -60,13 +65,17 @@ if ischar(data.bkg)
 else
     Bkg = data.bkg;
 end
-N_frames = vid.NumberOfFrames;
+
+N_frames = vid.Duration * vid.FrameRate;
+% N_frames =10;
+% warning('frame number was set to 10 for debugging reasons! - DE')
+
 N_views = 2; % FIXME: Should come from the code...
 
 if ~isfield(data,'flip')
-    flip = checkMouseSide(vid,Bkg); % Check if video is reversed.
-else
-    flip = data.flip;
+    data.flip = checkMouseSide(vid,Bkg); % Check if video is reversed.
+elseif ~any(ismember([0 1],data.flip))
+    data.flip = checkMouseSide(vid,Bkg); % Check if video is reversed.
 end
 
 if ~isfield(data,'scale')
@@ -124,7 +133,7 @@ expected_im_size = size(inv_ind_warp_mapping);
 % and nose.
 bounding_box = NaN(2,3,N_frames);
 for i_images = 1:N_frames
-    [~,Iaux] = readMouseImage(vid,i_images,Bkg,flip,scale,ind_warp_mapping,expected_im_size);
+    [~,Iaux] = readMouseImage(vid,i_images,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
     bounding_box(:,:,i_images) = computeMouseBox(Iaux,split_line);
     % For locomouse TM use computeMouseBox2(Iaux,split_line);
 end
@@ -138,6 +147,7 @@ bounding_box_dim = round(nanmin(nanmean(bounding_box(2,:,:),3) + 3 * nanstd(boun
 % is noisy. To reduce this effect we filter its position using a moving
 % average filter of size Nsamples.
 %%%FIXME: framerate.
+
 Nsamples = 5; 
 coeff = ones(1, Nsamples)/Nsamples;
 bounding_box = squeeze(bounding_box(1,:,:));
@@ -178,7 +188,7 @@ end
 for i_images = 1:N_frames
     %% Reading images from video and preprocessing data:
     bounding_box_i = bounding_box(:,i_images);
-    [~,Iaux] = readMouseImage(vid,i_images,Bkg,flip,scale,ind_warp_mapping,expected_im_size);
+    [~,Iaux] = readMouseImage(vid,i_images,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
     I_cell = cell(1,2);
     [I_cell{[2 1]}] = splitImage(Iaux,split_line);
     
@@ -271,17 +281,19 @@ for i_images = 1:N_frames
                 [i{i_views}, j{i_views}] = ind2sub(size(I_cell{i_views}),ind_temp(detections)');
                 if i_views  == 1
                     % Apply non-maxima suppresion to detected areas:
-                    [D2{i_views}, scores{i_views}] = nmsMax([i{i_views} j{i_views}],box_size_point{i_views}, scores{i_views}','center');
+                    [D2{i_views}, scores{i_views}] = nmsMax_mexed([i{i_views} j{i_views}],box_size_point{i_views}, scores{i_views}','center'); % use pre-compiled version
+                    %[D2{i_views}, scores{i_views}] = nmsMax([i{i_views} j{i_views}],box_size_point{i_views}, scores{i_views}','center');
                     % Refine locations taking the weighted mean of detections scores arond the maxima found:
                     D2{i_views} = weightedMean(D2{i_views}, Cmat, box_size_point{i_views});
-                    [D2{i_views}, scores{i_views}] = nmsMax(D2{i_views},box_size_point{i_views}, scores{i_views},'center');
+                    [D2{i_views}, scores{i_views}] = nmsMax_mexed(D2{i_views},box_size_point{i_views}, scores{i_views},'center'); % use pre-compiled version
+                    %[D2{i_views}, scores{i_views}] = nmsMax(D2{i_views},box_size_point{i_views}, scores{i_views},'center');
                     D2{1}(:,2) = D2{1}(:,2) + max(OFFSET(1),0);
                     D2{1}(:,1) = D2{1}(:,1) + split_line + max(OFFSET(2),0);
                     tracks_bottom{i_point,i_images} = [D2{1}(:,[2 1])';scores{i_views}];
                 else
                     % Applying a more conservative non-maxima suppression
                     % algorithm for the side view:
-                    [D2{i_views}, scores{i_views}] = peakClustering([i{i_views} j{i_views}],box_size_point{i_views}, scores{i_views}','center','max');
+                    [D2{i_views}, scores{i_views}] = peakClustering([i{i_views} j{i_views}],box_size_point{i_views}, scores{i_views}','center','max'); 
                     % There is too much overlap to refine these
                     % detections...
                     D2{2}(:,1) = D2{2}(:,1) + max(OFFSET(3),0);
@@ -321,7 +333,7 @@ for i_images = 1:N_frames
                 % increase separation accuracy. This method works well if
                 % one paw is static and another moving, but will fail if
                 % both paws have similar motion.
-                [~,Iaux2] = readMouseImage(vid,i_images-1,Bkg,flip,scale,ind_warp_mapping,expected_im_size);
+                [~,Iaux2] = readMouseImage(vid,i_images-1,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
                 I_vel = double(Iaux) - double(Iaux2);
                 moving = I_vel > 25; %%% FIXME: This clearly depends on image size. Must be normalized in some way.
                 D21_mov = reshape(getWindowFromImage(moving,D2{1}',round(box_size_point{1})/2),[],size(D2{1},1));
@@ -544,4 +556,3 @@ debug.Pairwise = Pairwise;
 debug.xvel = xvel;
 debug.occluded_distance = occluded_distance;
 data.split_line = split_line;
-data.flip = flip;

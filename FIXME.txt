@@ -1,0 +1,20 @@
+MTF_rawdata
+-----------
+- N_views = 2; % FIXME: Should come from the code...
+- data.scale; % FIXME: Check where this is computed...
+- data.threshold; % FIXME: Check where this is computed...
+- N_tail_points = 15; % FIXME: Hardcoded for the LocoMouse setup.
+
+Bounding Box:
+GENERAL: Implement a choice of bounding box parameters.
+
+FIXME: Normalize this according to box size and framerate.
+T = 0.7; % FIXME: Although defined as a percentage, give opportunity to tune.
+moving = I_vel > 25; %%% FIXME: This clearly depends on image size. Must be normalized in some way.
+D21_mov = sum(D21_mov,1) >= 0.02*prod(box_size_point{1}); %%% FIXME: Find robust values for moving/not moving classification.
+
+%% 	Computing unary potentials for tracking:
+% 	FIXME: The classes for the LocoMouse system have been hard coded
+
+%% Tracking 
+%FIXME: To generalize the code for other

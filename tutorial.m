@@ -61,25 +61,26 @@ LocoMouse_Tracker
 
 % Optionally, the code can be run from the command line as such:
 
-load model_01112013.mat
-load('E:\joao\Trabalho\CNP\LocoMouse\LocoMouse_Tracker\calibration_files\IDX_TM_biggerimage_23072014.mat');
-data.vid = 'E:\joao\Trabalho\CNP\LocoMouse\LocoMouse_Tracker\tm_example.avi';
-data.bkg = 'E:\joao\Trabalho\CNP\LocoMouse\LocoMouse_Tracker\tm_bg.png';
+
+model = load('model_LocoMouse_paper.mat');
+load('C:\Users\Dennis\Documents\GitHub\LocoMouse_Dev\LocoMouse_Tracker\calibration_files\IDX_pen.mat');
+data.vid = 'C:\Users\Dennis\Documents\LocoMouse_testing\G6AE1_98_28_1_control_S1T1.avi';
+data.bkg = 'C:\Users\Dennis\Documents\LocoMouse_testing\G6AE1_98_28_1_control_S1T.png';
 data.ind_warp_mapping = IDX;
 data.inv_ind_warp_mapping = IDX_inv;
 data.mirror_line = mirror_line;
-
+% data.flip = 0;
 [final_tracks,tracks_tail,OcclusionGrid,bounding_box,flip,data,debug] = MTF_rawdata(data, model);
 [final_tracks,tracks_tail] = convertTracksToUnconstrainedView(final_tracks,tracks_tail,size(imread(data.bkg)),data.ind_warp_mapping,data.flip,data.scale);
 
 %% 6) Displaying results:
 % Results are displayed by calling LocoMouse_DisplayTracks GUI with the
 % following inputs:
-T = load('E:\joao\Trabalho\CNP\LocoMouse\output\data\tm_example.mat');
-T.data.vid = 'E:\joao\Trabalho\CNP\LocoMouse\LocoMouse_Tracker\tm_example.avi';
-T.data.bkg = 'E:\joao\Trabalho\CNP\LocoMouse\LocoMouse_Tracker\tm_bg.png';
-displayTracksRaw({T.data,T.final_tracks,T.tracks_tail,{T.OcclusionGrid,T.bounding_box}});
-load('model_01112013.mat','model');
+T = load('C:\Users\Dennis\Documents\LocoMouse_testing\data\G6AE1_98_28_1_control_S1T1.mat');
+T.data.vid = 'C:\Users\Dennis\Documents\LocoMouse_testing\G6AE1_98_28_1_control_S1T1.avi';
+T.data.bkg = 'C:\Users\Dennis\Documents\LocoMouse_testing\G6AE1_98_28_1_control_S1T.png';
+LocoMouse_DisplayTracks({T.data,T.final_tracks,T.tracks_tail,{T.OcclusionGrid,T.bounding_box}});
+model=load('C:\Users\Dennis\Documents\GitHub\LocoMouse_Dev\LocoMouse_Tracker\model_files\model_LocoMouse_paper.mat');
 T.model = model; clear model
 
 %% 7) Debugging the tracking algorithm:

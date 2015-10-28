@@ -7,7 +7,7 @@ function varargout = LocoMouse_Tracker(varargin)
 % Author: Joao Fayad (joao.fayad@neuro.fchampalimaud.org)
 % Last Modified: 17/11/2014
 
-% Last Modified by GUIDE v2.5 22-Jul-2014 16:38:59
+% Last Modified by GUIDE v2.5 27-Oct-2015 17:42:02
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
@@ -455,16 +455,24 @@ for i_files = 1:Nfiles
             fprintf('Tracking %s ...\n',file_name)
             handles.data.bkg = bkg_file;clear bkg_file;
             handles.data.vid = file_name;
-            handles.data.flip = false; % added by HGM for the treadmill
-            [final_tracks,tracks_tail,OcclusionGrid,bounding_box,flip,handles.data,debug] = MTF_rawdata(handles.data, handles.model);
-            [final_tracks,tracks_tail] = convertTracksToUnconstrainedView(final_tracks,tracks_tail,size(handles.data.ind_warp_mapping),handles.data.ind_warp_mapping,flip,handles.data.scale);
+            
+%            LocoMouse_Tracker handles.data.flip = false; % added by HGM for the treadmill
+            switch handles.MouseOrientation
+                case 2
+                    handles.data.flip = false;
+                case 3
+                    handles.data.flip = true;
+            end
+            
+            [final_tracks,tracks_tail,OcclusionGrid,bounding_box,handles.data,debug] = MTF_rawdata(handles.data, handles.model);
+            [final_tracks,tracks_tail] = convertTracksToUnconstrainedView(final_tracks,tracks_tail,size(handles.data.ind_warp_mapping),handles.data.ind_warp_mapping,handles.data.flip,handles.data.scale);
             % clearing the background image to avoid problems:
             handles.data.bkg = '';
             handles.data.vid = '';
             
             % Saving tracking data:
             data = handles.data;
-            save(data_file_name,'final_tracks','tracks_tail','OcclusionGrid','bounding_box','flip','debug','data');
+            save(data_file_name,'final_tracks','tracks_tail','OcclusionGrid','bounding_box','debug','data');
             % Performing swing and stance detection:
             clear data;
 
@@ -829,4 +837,28 @@ switch state
         drawnow;
     otherwise 
         error('Unknown option!');
+end
+
+
+
+% --- Executes on selection change in MouseOrientation.
+function MouseOrientation_Callback(hObject, eventdata, handles)
+% hObject    handle to MouseOrientation (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns MouseOrientation contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from MouseOrientation
+
+
+% --- Executes during object creation, after setting all properties.
+function MouseOrientation_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to MouseOrientation (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
 end
