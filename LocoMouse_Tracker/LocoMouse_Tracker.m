@@ -7,7 +7,8 @@ function varargout = LocoMouse_Tracker(varargin)
 % Author: Joao Fayad (joao.fayad@neuro.fchampalimaud.org)
 % Last Modified: 17/11/2014
 
-% Last Modified by GUIDE v2.5 27-Oct-2015 17:42:02
+% Last Modified by GUIDE v2.5 03-Nov-2015 19:47:21
+
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
@@ -89,22 +90,27 @@ set(handles.edit_output_path,'String',pwd);
 set(handles.figure1,'userdata',pwd);
 
 % Set of handles that are disabled uppon tracking:
-handles.disable_with_start = [handles.pushbutton_start... 
-    handles.pushbutton_add_background_mode...
-    handles.pushbutton_add_calibration_file...
-    handles.pushbutton_add_file...
-    handles.pushbutton_add_folder...
-    handles.pushbutton_add_model...
-    handles.pushbutton_add_output_mode...
-    handles.pushbutton_add_with_subfolders...
-    handles.pushbutton_browse_output...
-    handles.pushbutton_remove...
-    handles.popupmenu_background_mode...
-    handles.popupmenu_calibration_files...
-    handles.popupmenu_model...
-    handles.popupmenu_output_mode...
-    handles.edit_output_path...
-    handles.checkbox_overwrite_results];
+    handles.disable_with_start = [  handles.pushbutton_start ... 
+                                    handles.pushbutton_add_background_mode ...
+                                    handles.pushbutton_add_calibration_file ...
+                                    handles.pushbutton_add_file ...
+                                    handles.pushbutton_add_folder ...
+                                    handles.pushbutton_add_model ...
+                                    handles.pushbutton_add_output_mode ...
+                                    handles.pushbutton_add_with_subfolders ...
+                                    handles.pushbutton_browse_output ...
+                                    handles.pushbutton_remove ...
+                                    handles.popupmenu_background_mode ...
+                                    handles.popupmenu_calibration_files ...
+                                    handles.popupmenu_model ...
+                                    handles.popupmenu_output_mode ...
+                                    handles.edit_output_path ...
+                                    handles.checkbox_overwrite_results ...
+                                    handles.BoundingBox_choice ...
+                                    handles.MouseOrientation ...
+                                    handles.LoadSettings ...
+                                    handles.SaveSettings ...
+                                    ];
 
 handles.enable_with_start = handles.pushbutton_stop;
 
@@ -116,8 +122,26 @@ setappdata(handles.figure1,'current_search_path',pwd);
 % Update handles structure
 guidata(hObject, handles);
 
+set(handles.figure1,'CloseRequestFcn',@LocoMouse_closeRequestFcn);
+
+% Loading latest settings
+
+    [LMT_path,~,~] = fileparts(which('LocoMouse_Tracker'));
+    LMT_path = [LMT_path filesep 'GUI_Settings'];
+    if exist(LMT_path,'dir')==7
+        if exist([LMT_path filesep 'GUI_Recovery_Settings.mat'],'file') == 2
+            LoadSettings_Callback(hObject, eventdata, handles, 'GUI_Recovery_Settings.mat')
+        end
+    end
+
 % UIWAIT makes LocoMouse_Tracker wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
+
+function LocoMouse_closeRequestFcn(hObject, eventdata)
+    disp('Saving')
+    handles = guidata(gcbo);
+    SaveSettings_Callback(hObject, eventdata, handles, 'GUI_Recovery_Settings.mat') 
+    delete(gcbo)
 
 % --- Outputs from this function are returned to the command line.
 function varargout = LocoMouse_Tracker_OutputFcn(hObject, eventdata, handles) 
@@ -382,6 +406,9 @@ function pushbutton_start_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % Geting the video file list:
+disp('----------------[Tracking START]----');
+SaveSettings_Callback(hObject, eventdata, handles, 'GUI_Recovery_Settings.mat');
+
 set(handles.disable_with_start,'Enable','off');
 set(handles.enable_with_start,'Enable','on');
 % reset_gui_state = onCleanup(@()());
@@ -397,8 +424,7 @@ handles = loadCalibrationFile(fullfile(handles.root_path,'calibration_files',[ca
 % Model file:
 model_file_pos = get(handles.popupmenu_model,'Value');
 model_file = get(handles.popupmenu_model,'String');model_file = model_file{model_file_pos};clear model_file_pos;
-handles.model = load(fullfile(handles.root_path,'model_files',[model_file '.mat']));
-% handles = loadModel(fullfile(handles.root_path,'model_files',[model_file '.mat']),handles);
+handles = loadModel(fullfile(handles.root_path,'model_files',[model_file '.mat']),handles); clear model_file
 
 % Output and background functions:
 bkg_mode = get(handles.popupmenu_background_mode,'Value');
@@ -457,14 +483,16 @@ for i_files = 1:Nfiles
             handles.data.vid = file_name;
             
 %            LocoMouse_Tracker handles.data.flip = false; % added by HGM for the treadmill
-            switch handles.MouseOrientation
+            switch handles.MouseOrientation.Value
                 case 2
-                    handles.data.flip = false;
+                    handles.data.flip = 'LR';
                 case 3
+                    handles.data.flip = false;
+                case 4
                     handles.data.flip = true;
             end
             
-            [final_tracks,tracks_tail,OcclusionGrid,bounding_box,handles.data,debug] = MTF_rawdata(handles.data, handles.model);
+            [final_tracks,tracks_tail,OcclusionGrid,bounding_box,handles.data,debug] = MTF_rawdata(handles.data, handles.model, handles.BoundingBox_choice.Value);
             [final_tracks,tracks_tail] = convertTracksToUnconstrainedView(final_tracks,tracks_tail,size(handles.data.ind_warp_mapping),handles.data.ind_warp_mapping,handles.data.flip,handles.data.scale);
             % clearing the background image to avoid problems:
             handles.data.bkg = '';
@@ -490,6 +518,7 @@ end
 fprintf('%d out of %d files correctly processed.\n',Nfiles-error_counter,Nfiles);
 fprintf('Total run time: ');
 disp(datestr(datenum(0,0,0,0,0,toc),'HH:MM:SS'))
+disp('------------------[Tracking END]----');
 set(handles.disable_with_start,'Enable','on');
 set(handles.enable_with_start,'Enable','off');
 
@@ -581,7 +610,6 @@ else
     set(handles.figure1,'UserData',proposed_path);
 end
 
-% handles = loadModel(proposed_file,handles);
 guidata(handles.figure1,handles);
 
 
@@ -599,40 +627,44 @@ end
 
 % --- Function that loads a model file and performs a few basic checks:
 function handles = loadModel(full_file_path, handles)
-try
     model = load(full_file_path);
     % Since there is no model file type we must check we have all the right
     % fields:
-    name_fields = {'paw','tail','snout'};
-    name_sub_fields = {'w','rho'};
-    allfields = true;
-    
-    for i_f = 1:3
-        if isfield(model,name_fields{i_f})
-            for i_sf = 1:2
-                if ~isfield(model.(name_fields{i_f}),name_sub_fields{i_sf})
-                    allfields = false;
-                    fprintf('Error: %s does not contain field information for %s for the %s feature. This model cannot be used.',load_file,name_sub_fields{i_sf},name_fields{i_f});
-                    beep
+    if isfield(model,'model')
+        model =model.model;
+    end
+    ModelFieldNames      = fieldnames(model);
+    ExpectedModel        = [{'line'}  {'tail'} ; ...
+                            {'point'} {'paw'} ; ...
+                            {'point'} {'snout'}];
+                        
+    failed = false;
+    if ~any(ismember(ModelFieldNames,'line')) || ~any(ismember(ModelFieldNames,'point'))    
+        for emt = 1:size(ExpectedModel,1)
+             if any(ismember(ModelFieldNames,ExpectedModel(emt,2)))
+                if any(ismember(fieldnames(eval(['model.' char(ExpectedModel(emt,2))])),'w')) && any(ismember(fieldnames(eval(['model.' char(ExpectedModel(emt,2))])),'rho'))
+                     eval(['model.',char(ExpectedModel(emt,1)),'.',char(ExpectedModel(emt,2)),' = model.',char(ExpectedModel(emt,2)),';']);
+                else
+                     failed = true;
                 end
-            end
-        else
-            fprintf('Error: %s does not contain field information for %s. This model cannot be used.\n',full_file_path,name_fields{i_f});
-            allfields = false;
-            beep
+             else
+                 failed = true;
+             end
+
         end
     end
-    
-    if allfields
-        handles.model = model;
-        clear model;
+    if failed
+        error('LocoMouse_Tracker() / loadModel() :: Model file useless.')
     else
-        fprintf('Could not load model file.\n');
+        if ~isfield(model.point.paw,'N_points')
+            model.point.paw.N_points =4;
+        end
+        if ~isfield(model.point.snout,'N_points')
+            model.point.snout.N_points =1;
+        end
+        handles.model =model;
     end
-catch load_error
-    fprintf('Error: Could not load %s with MATLAB.\nError Message:%s\n',full_file_path,load_error.message);
-    beep;
-end
+
 
 % --- Function that loads a calibration file and performs a few basic checks:
 function handles = loadCalibrationFile(full_file_path, handles)
@@ -640,27 +672,29 @@ try
     data = load(full_file_path);
     % Since there is no model file type we must check we have all the right
     % fields:
-    name_fields = {'ind_warp_mapping','inv_ind_warp_mapping','split_line'};
-    allfields = true;
+    name_fields = {'ind_warp_mapping','inv_ind_warp_mapping','mirror_line','split_line'};
     
-    for i_f = 1:3
-        if ~isfield(data,name_fields{i_f})
-            allfields = false;
-            fprintf('Error: %s does not contain field information for %s. This calibration file cannot be used.',load_file,name_fields{i_f});
-            beep
+    tfields = fieldnames(data);
+        
+    for i_f = 1:size(name_fields,2)
+        tfoundfield(i_f) =any(ismember(name_fields(i_f),tfields));
+    end
+    allfields = all(tfoundfield([1,2])) && any(tfoundfield([3 4]));
+    if ~allfields
+         fprintf('ERROR: Incomplete model file.')
+    else
+        if tfoundfield(3) && ~tfoundfield(4)
+            data.split_line = data.mirror_line;
+            fprintf('WARNING: Outdated fieldname "mirror_line" should be renamed to "split_line".')
+            disp(full_file_path);     
         end
-    end
-    
-    if ~isfield(data,'scale')
-        data.scale = 1;
-    end
-
-    if allfields
+        if ~isfield(data,'scale')
+            data.scale = 1;
+        end
         handles.data = data;
         clear data;
-    else
-        fprintf('Could not load model file.\n');
     end
+    
 catch load_error
     fprintf('Error: Could not load %s with MATLAB.\nError Message:%s\n',full_file_path,load_error.message);
     beep;
@@ -862,3 +896,104 @@ function MouseOrientation_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on selection change in BoundingBox_choice.
+function BoundingBox_choice_Callback(hObject, eventdata, handles)
+% hObject    handle to BoundingBox_choice (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns BoundingBox_choice contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from BoundingBox_choice
+
+
+% --- Executes during object creation, after setting all properties.
+function BoundingBox_choice_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to BoundingBox_choice (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+
+[p_boundingBoxFunctions, ~, ~]=fileparts(which('computeMouseBox'));
+if isempty(p_boundingBoxFunctions)
+    error('INITIALIZATION ERROR: computeMouseBox.m is missing.')
+end
+load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'ComputeMouseBox_option');
+set(hObject,'String',ComputeMouseBox_option); 
+
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+% --- Executes on button press in SaveSettings.
+function SaveSettings_Callback(hObject, eventdata, handles, tsfilename)
+% hObject    handle to SaveSettings (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+[LMT_path,~,~] = fileparts(which('LocoMouse_Tracker'));
+LMT_path = [LMT_path filesep 'GUI_Settings'];
+if exist(LMT_path,'dir')~=7
+    mkdir(LMT_path);
+end
+
+if exist('tsfilename')== 1 
+    S_filename = tsfilename;
+else
+    S_filename = uiputfile([LMT_path filesep '*.mat']);
+end
+
+if ischar(S_filename)
+    t_values.BoundingBox_choice.Value               = handles.BoundingBox_choice.Value;
+    t_values.MouseOrientation.Value                 = handles.MouseOrientation.Value;
+    t_values.popupmenu_model.Value                  = handles.popupmenu_model.Value;
+    t_values.popupmenu_calibration_files.Value      = handles.popupmenu_calibration_files.Value;
+    t_values.checkbox_overwrite_results.Value       = handles.checkbox_overwrite_results.Value;
+    t_values.popupmenu_background_mode.Value        = handles.popupmenu_background_mode.Value;
+    t_values.popupmenu_output_mode.Value            = handles.popupmenu_output_mode.Value;
+
+    save([LMT_path filesep S_filename],'t_values')
+    if exist([LMT_path filesep S_filename],'file')== 2
+        disp('Settings saved.')
+    end
+end
+
+
+% --- If Enable == 'on', executes on mouse press in 5 pixel border.
+% --- Otherwise, executes on mouse press in 5 pixel border or over SaveSettings.
+function SaveSettings_ButtonDownFcn(hObject, eventdata, handles)
+% hObject    handle to SaveSettings (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in LoadSettings.
+function LoadSettings_Callback(hObject, eventdata, handles, tlfilename)
+% hObject    handle to LoadSettings (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+[LMT_path,~,~] = fileparts(which('LocoMouse_Tracker'));
+LMT_path = [LMT_path filesep 'GUI_Settings'];
+if exist(LMT_path,'dir')~=7
+    mkdir(LMT_path);
+end
+
+if exist('tlfilename')== 1 
+    L_filename = tlfilename;
+else
+    L_filename = uigetfile([LMT_path filesep '*.mat']);
+end
+
+if ischar(L_filename)
+    load([LMT_path filesep L_filename],'t_values');
+
+    tfigObj = fieldnames(t_values);
+
+    for tf = 1:size(tfigObj,1)
+        set(handles.(tfigObj{tf}),'Value',t_values.(tfigObj{tf}).Value);
+    end
+end
+
+

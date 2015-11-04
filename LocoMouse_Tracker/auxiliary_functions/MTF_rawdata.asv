@@ -426,7 +426,7 @@ for i_images = 1:N_frames
                 if ~isempty(weights)
                     X = OFFSET(1) + [0 bounding_box_dim(1)];
                     Y = OFFSET(2)+ split_line + [0 bounding_box_dim(2)];
-                    weights(1,:) = pawQuadrantWeights_Distance(tracks_bottom{i_point,i_images}(1,:),tracks_bottom{i_point,i_images}(2,:),X,Y,tweight(5,:)); % snout
+                    weights(1,:) = pawQuadrantWeights_Distance(tracks_bottom{i_point,i_images}(1,:),tracks_bottom{i_point,i_images}(2,:),X,Y,tweight(5,1),tweight(5,2),tweight(5,3)); % snout
                     weights = weights';
                     valid_snout = weights > 0;
                     tracks_bottom{i_point,i_images} = tracks_bottom{i_point,i_images}(:,valid_snout);

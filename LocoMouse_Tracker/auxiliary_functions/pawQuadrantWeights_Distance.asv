@@ -44,7 +44,6 @@ function weights = pawQuadrantWeights_Distance(varargin)
         weights(weights < (1-max_distance)) = 0;
     end
     if ~any(isnan([xMin xMax yMin yMax]))
-        weights(x < xMin | x > xMax) = 0;
-        weights(y < yMin | y > yMax) = 0;
-    end
+    weights(x < xMin | x > xMax) = 0;
+    weights(y < yMin | y > yMax) = 0;
 end

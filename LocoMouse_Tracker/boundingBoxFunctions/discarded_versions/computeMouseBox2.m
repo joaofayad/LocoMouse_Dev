@@ -1,5 +1,5 @@
-function [box, cc, I_crop] = computeMouseBox2(im,mirror_line)
-bottom_thresh=.07; %% changed threshold (.115)
+function [box, cc, I_crop] = computeMouseBox2(im,split_line)
+bottom_thresh=.07; % changed threshold (.115)
 side_thresh=.005;
 H = fspecial('disk',6);
 cc = [];
@@ -8,12 +8,12 @@ cc = [];
     
 % im =(read(mov,n))-bg;
 % im = cell2mat(I);
-%side_view_box=[0 0 size(im,2) mirror_line-10]; changed dana
+%side_view_box=[0 0 size(im,2) split_line-10]; changed dana
 
-side_view_box=[0 0 size(im,2) mirror_line-30];
+side_view_box=[0 0 size(im,2) split_line-30];
 
-side_view=[0 0 size(im,2) mirror_line];
-bottom_view=[0 mirror_line size(im,2) size(im,1)-mirror_line];
+side_view=[0 0 size(im,2) split_line];
+bottom_view=[0 split_line size(im,2) size(im,1)-split_line];
 box = NaN(2,4);
 %% side view
 I_crop{1}=imcrop(im,side_view);
@@ -58,7 +58,7 @@ box = [box(1,1)+box(1,3)-1, box(2,2)+box(2,4)-1, box(1,2)+box(1,4)+10-1;...
 
 
 % box = [max([box(1,1)+box(1,3)-1 box(2,1)+box(2,3)-1]) box(2,2)+box(2,4)-1 box(1,2)+box(1,4)+10-1;max([box(1,3) box(2,3)]) box(2,4) box(1,4)];
-%size(im,1)-mirror_line
+%size(im,1)-split_line
 %% plot
 
 % subplot(2,1,1)
@@ -71,6 +71,6 @@ box = [box(1,1)+box(1,3)-1, box(2,2)+box(2,4)-1, box(1,2)+box(1,4)+10-1;...
 % title(n)
  %combine bottom and side
 
- %rectangle('Position',[mean(squeeze(box(1,n,:))) 0 mean(squeeze(box(3,n,:))) size(im,1)-mirror_line],'edgecolor','g') % min object x, 0, y width max-min,width 
+ %rectangle('Position',[mean(squeeze(box(1,n,:))) 0 mean(squeeze(box(3,n,:))) size(im,1)-split_line],'edgecolor','g') % min object x, 0, y width max-min,width 
 % end
 %end

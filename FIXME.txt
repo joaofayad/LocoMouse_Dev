@@ -18,3 +18,7 @@ D21_mov = sum(D21_mov,1) >= 0.02*prod(box_size_point{1}); %%% FIXME: Find robust
 
 %% Tracking 
 %FIXME: To generalize the code for other
+
+- include Goncalo's bodymass center calculation
+- allow different sets of bounding box settings
+
