@@ -472,6 +472,9 @@ guidata(hObject,handles);
 
 % --- Display Tracks
 function displayImage(obj,event,handles)
+
+% FIXME Flip image if flip is true. There is a function for this: fliplr()
+
 current_frame = get(handles.figure1,'UserData');
 current_frame = current_frame{1};
 if current_frame > handles.vid.NumberOfFrames
