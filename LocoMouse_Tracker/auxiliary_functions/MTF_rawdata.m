@@ -217,9 +217,8 @@ end
 WS=load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'WeightSettings');
 tweight =  WS.WeightSettings{bb_choice};
 % Looping over all the images
- warning('PARFOR changed to FOR for debugging reasons. [DE]')
-%par
-for i_images = 1:N_frames
+% warning('PARFOR changed to FOR for debugging reasons. [DE]')
+parfor i_images = 1:N_frames
     
    %% Reading images from video and preprocessing data:
    % disp(['frame: ',num2str(i_images)]);
