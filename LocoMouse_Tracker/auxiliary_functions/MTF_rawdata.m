@@ -219,7 +219,8 @@ tweight =  WS.WeightSettings{bb_choice};
 % Looping over all the images
 % warning('PARFOR changed to FOR for debugging reasons. [DE]')
 parfor i_images = 1:N_frames
-    
+%     warning('function breaking debugging edit. [DE]')
+%     i_images=ceil(N_frames/2);
    %% Reading images from video and preprocessing data:
    % disp(['frame: ',num2str(i_images)]);
     bounding_box_i = bounding_box(:,i_images);
@@ -580,6 +581,9 @@ for i_tracks = 1:N_pointlike_tracks
     end
     M_top(i_tracks,:) = Mpf_top;
 end
+
+
+disp(['flip: ' num2str(data.flip)])
 
 % Debug data:
 debug.tracks_bottom = tracks_bottom;

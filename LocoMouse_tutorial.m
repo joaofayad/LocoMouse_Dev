@@ -74,9 +74,11 @@ data.split_line = split_line; % in older versions called mirror_line;
 %% 6) Displaying results:
 % Results are displayed by calling LocoMouse_DisplayTracks GUI with the
 % following inputs:
-T = load('C:\Users\Dennis\Documents\LocoMouse_testing\data\b1_21_133_2_tied_0.225_0.225__36.mat');
-T.data.vid = 'C:\Users\Dennis\Documents\LocoMouse_testing\b1_21_133_2_tied_0.225_0.225__36.avi';
-T.data.bkg = 'C:\Users\Dennis\Documents\LocoMouse_testing\b1bg.png';
+f_l = 'B6C1_66_0_1_AmbLight_S1T1_0';
+f_s = 'B6C1_66_0_1_AmbLight_S1T';
+T = load(['C:\Users\Dennis\Documents\MATLAB\data\',f_l,'.mat']);
+T.data.vid = ['C:\Users\Dennis\Documents\DATA_DarkvsLight_Overground\',f_l,'.avi'];
+T.data.bkg = ['C:\Users\Dennis\Documents\DATA_DarkvsLight_Overground\',f_s,'.png'];
 LocoMouse_DisplayTracks({T.data,T.final_tracks,T.tracks_tail,{T.OcclusionGrid,T.bounding_box}});
 model=load('C:\Users\Dennis\Documents\GitHub\LocoMouse_Dev\LocoMouse_Tracker\model_files\model_01112013_fields.mat');
 T.model = model; clear model
