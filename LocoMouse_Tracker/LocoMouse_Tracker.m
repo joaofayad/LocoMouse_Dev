@@ -453,9 +453,10 @@ error_counter = 0;
 total_time = tic;
 
 for i_files = 1:Nfiles
+    disp('----------------------');
     tic;
     % Going over the file list:
-    file_name = file_list{i_files};
+    file_name = char(strtrim(file_list{i_files}));
     [~,trial_name,~] = fileparts(file_name);
     [out_path_data,out_path_image] = feval(output_fun,output_path,file_name);
   
@@ -500,8 +501,6 @@ for i_files = 1:Nfiles
             [final_tracks,tracks_tail,OcclusionGrid,bounding_box,handles.data,debug] = MTF_rawdata(handles.data, handles.model, handles.BoundingBox_choice.Value);
             [final_tracks,tracks_tail] = convertTracksToUnconstrainedView(final_tracks,tracks_tail,size(handles.data.ind_warp_mapping),handles.data.ind_warp_mapping,handles.data.flip,handles.data.scale);
             % clearing the background image to avoid problems:
-            handles.data.bkg = '';
-            handles.data.vid = '';
             
             % Saving tracking data:
             data = handles.data;
@@ -519,6 +518,10 @@ for i_files = 1:Nfiles
     else
         fprintf('%s has already been tracked. To re-track check the "Overwrite existing results" box.\n',file_name);
     end
+    disp('----------------------');
+	handles.data.bkg = '';
+    handles.data.vid = '';
+    handles.data = rmfield(handles.data,'flip');
 end
 fprintf('%d out of %d files correctly processed.\n',Nfiles-error_counter,Nfiles);
 fprintf('Total run time: ');
