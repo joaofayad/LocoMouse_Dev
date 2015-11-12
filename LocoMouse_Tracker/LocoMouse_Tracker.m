@@ -954,13 +954,16 @@ else
 end
 
 if ischar(S_filename)
-    t_values.BoundingBox_choice.Value               = handles.BoundingBox_choice.Value;
-    t_values.MouseOrientation.Value                 = handles.MouseOrientation.Value;
-    t_values.popupmenu_model.Value                  = handles.popupmenu_model.Value;
-    t_values.popupmenu_calibration_files.Value      = handles.popupmenu_calibration_files.Value;
-    t_values.checkbox_overwrite_results.Value       = handles.checkbox_overwrite_results.Value;
-    t_values.popupmenu_background_mode.Value        = handles.popupmenu_background_mode.Value;
-    t_values.popupmenu_output_mode.Value            = handles.popupmenu_output_mode.Value;
+    
+    t_values.checkbox_overwrite_results.Value     = handles.checkbox_overwrite_results.Value;
+    
+	t_values.BoundingBox_choice.String            = handles.BoundingBox_choice.String{handles.BoundingBox_choice.Value};
+    t_values.MouseOrientation.String              = handles.MouseOrientation.String{handles.MouseOrientation.Value};
+    t_values.popupmenu_model.String               = handles.popupmenu_model.String{handles.popupmenu_model.Value};
+    t_values.popupmenu_calibration_files.String   = handles.popupmenu_calibration_files.String{handles.popupmenu_calibration_files.Value};
+    t_values.popupmenu_background_mode.String     = handles.popupmenu_background_mode.String{handles.popupmenu_background_mode.Value};
+    t_values.popupmenu_output_mode.String         = handles.popupmenu_output_mode.String{handles.popupmenu_output_mode.Value};
+    
 
     save([LMT_path filesep S_filename],'t_values')
     if exist([LMT_path filesep S_filename],'file')== 2
@@ -1000,7 +1003,18 @@ if ischar(L_filename)
     tfigObj = fieldnames(t_values);
 
     for tf = 1:size(tfigObj,1)
-        set(handles.(tfigObj{tf}),'Value',t_values.(tfigObj{tf}).Value);
+        if isfield(t_values.(tfigObj{tf}),'String')
+            if any(ismember(handles.(tfigObj{tf}).String,t_values.(tfigObj{tf}).String))
+                tval = find(ismember(handles.(tfigObj{tf}).String,t_values.(tfigObj{tf}).String));
+            else
+                warning(['Non-existend setting for ',tfigObj{tf},'!'])
+                tval=1;
+            end
+        else
+            tval = t_values.(tfigObj{tf}).Value;
+        end
+        
+        set(handles.(tfigObj{tf}),'Value',tval);
     end
 end
 
