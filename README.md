@@ -12,9 +12,9 @@ The code is currently licenced for non-commercial use only. Other licences can
 be arranged on contact with the authors. 
 
 For questions, suggestions or bug reporting please contact 
-Dennis Eckmeier (dennis.eckmeier@neuro.fchampalimaud.org)
-Megan Carey, (principal investigator, megan.carey@neuro.fchampalimaud.org)
-original author Joao Fayad (joaofayad@gmail.com). 
+Dennis Eckmeier (dennis.eckmeier@neuro.fchampalimaud.org), 
+Megan Carey, (principal investigator, megan.carey@neuro.fchampalimaud.org),
+or the original author Joao Fayad (joaofayad@gmail.com). 
 
 If you find this code useful, please reference it together with the LocoMouse
 system paper.
