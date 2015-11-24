@@ -511,17 +511,19 @@ for i_files = 1:Nfiles
             fprintf('Done. Elapsed time: ')
             disp(datestr(datenum(0,0,0,0,0,toc(current_file_time)),'HH:MM:SS'));
         catch tracking_error
-%             tracking_error
             displayErrorGui(tracking_error);
             error_counter = error_counter + 1;
         end
+            disp('----------------------');
+            handles.data.bkg = '';
+            handles.data.vid = '';
+            if isfield(handles.data,'flip')
+                handles.data = rmfield(handles.data,'flip');
+            end
     else
         fprintf('%s has already been tracked. To re-track check the "Overwrite existing results" box.\n',file_name);
     end
-    disp('----------------------');
-	handles.data.bkg = '';
-    handles.data.vid = '';
-    handles.data = rmfield(handles.data,'flip');
+
 end
 fprintf('%d out of %d files correctly processed.\n',Nfiles-error_counter,Nfiles);
 fprintf('Total run time: ');
