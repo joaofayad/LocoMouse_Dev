@@ -67,7 +67,7 @@ else
     Bkg = data.bkg;
 end
 
-N_frames = vid.Duration * vid.FrameRate;
+N_frames = floor(vid.Duration * vid.FrameRate);
 % N_frames =10;
 % warning('frame number was set to 10 for debugging reasons! - DE')
 
@@ -163,8 +163,8 @@ parfor i_images = 1:N_frames
     [~,Iaux] = readMouseImage(vid,i_images,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
     % To change bounding box computation, see READ_BEFORE_CHANGING_ANYTHING.m 
     % in ... \LocoMouse_Dev\LocoMouse_Tracker\boundingBoxFunctions  [DE]
-    bounding_box(:,:,i_images) = round(Call_computeMouseBox(Iaux, split_line,tcmd_string)); % Call_computeMouseBox executes eval(tcmd_string)
-    bdymasscenter(i_images,:) = computebdymass(Iaux); % calculates the center of mass of the silhouette of the mouse [GF]
+    [bounding_box(:,:,i_images),~,~] = Call_computeMouseBox(Iaux, split_line,tcmd_string); % Call_computeMouseBox executes eval(tcmd_string)
+    bdymasscenter(i_images,:) = computebdymass(Iaux,split_line); % calculates the center of mass of the silhouette of the mouse [GF]
 end
 
 % Take mean box size and add 3 standard deviations:
