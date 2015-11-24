@@ -1,23 +1,34 @@
-LocoMouse Tracker v2.0
+LocoMouse Tracker v2.0 Development Version
+
+This is a development version meant for members of the Carey lab 
+(Champalimaud Foundation, Lisbon, Portugal) to be tweaked and expanded 
+to meet the changing requirements for different research projects.
+
+While we are trying to keep this process clean, there is no guarantee that all
+bugs have been found after the latest changes were made at the point you are 
+downloading it.
 
 The code is currently licenced for non-commercial use only. Other licences can
 be arranged on contact with the authors. 
 
-This code is an alpha release. For questions, suggestions or bug reporting
-please contact Joao Fayad by email (joaofayad@gmail.com). 
+For questions, suggestions or bug reporting please contact 
+Dennis Eckmeier (dennis.eckmeier@neuro.fchampalimaud.org), 
+Megan Carey, (principal investigator, megan.carey@neuro.fchampalimaud.org),
+or the original author Joao Fayad (joaofayad@gmail.com). 
 
 If you find this code useful, please reference it together with the LocoMouse
 system paper.
 
 --|Intro|--
-LocoMouse_Tracker is a software developed in MATLAB R2013 for tracking
-mouse features of locomoting mice when observing them from the side and bottom
-view simultaneously. It uses Support Vector Machines to learn image filters for
-each of the features and a multi-target tracking framework to resolve the most
-likely tracks from the image observations. This software was developed for
-specific setup, and so replicating such conditions is essential for it to work
-as intended. The general framework is, however, flexible enough to be modified
-for a different setup. 
+LocoMouse_Tracker was developed in MATLAB R2013 for tracking mouse features of 
+locomoting mice when observing them from the side and bottom view simultaneously. 
+Since then it is being updated for use in later Matlab versions when necessary for 
+continued use in the Carey Lab.
+It uses Support Vector Machines to learn image filters for each of the features 
+and a multi-target tracking framework to resolve the most likely tracks from the 
+image observations. This software was developed for specific setup, and so 
+replicating such conditions is essential for it to work as intended. The general 
+framework is, however, flexible enough to be modified for a different setup. 
 
 Please read the following files before using this code:
 
