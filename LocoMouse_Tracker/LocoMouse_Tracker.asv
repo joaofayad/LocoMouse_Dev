@@ -507,14 +507,12 @@ for i_files = 1:Nfiles
             data = handles.data;
             save(data_file_name,'final_tracks','tracks_tail','OcclusionGrid','bounding_box','debug','data');
             
-            % Saving data plot figures
+            %
             if handles.checkbox_ExpFigures.Value
                 MTF_export_figures(final_tracks, tracks_tail, data_file_name);
             end
             
-            % FIXME Performing swing and stance detection:
-            
-            % --- ending it:
+            % Performing swing and stance detection:
             clear data;
 
             fprintf('Done. Elapsed time: ')
