@@ -138,7 +138,6 @@ set(handles.figure1,'CloseRequestFcn',@LocoMouse_closeRequestFcn);
 % uiwait(handles.figure1);
 
 function LocoMouse_closeRequestFcn(hObject, eventdata)
-    disp('Saving')
     handles = guidata(gcbo);
     SaveSettings_Callback(hObject, eventdata, handles, 'GUI_Recovery_Settings.mat') 
     delete(gcbo)
@@ -439,6 +438,7 @@ output_fun = get(handles.popupmenu_output_mode,'String');output_fun = output_fun
 
 % Reading output path:
 output_path = get(handles.edit_output_path,'String');
+
 try
     if isempty(gcp('nocreate'))
         parpool('open');
@@ -940,39 +940,10 @@ end
 
 % --- Executes on button press in SaveSettings.
 function SaveSettings_Callback(hObject, eventdata, handles, tsfilename)
-% hObject    handle to SaveSettings (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-[LMT_path,~,~] = fileparts(which('LocoMouse_Tracker'));
-LMT_path = [LMT_path filesep 'GUI_Settings'];
-if exist(LMT_path,'dir')~=7
-    mkdir(LMT_path);
-end
-
-if exist('tsfilename')== 1 
-    S_filename = tsfilename;
-else
-    S_filename = uiputfile([LMT_path filesep '*.mat']);
-end
-
-if ischar(S_filename)
-    
-    t_values.checkbox_overwrite_results.Value     = handles.checkbox_overwrite_results.Value;
-    
-	t_values.BoundingBox_choice.String            = handles.BoundingBox_choice.String{handles.BoundingBox_choice.Value};
-    t_values.MouseOrientation.String              = handles.MouseOrientation.String{handles.MouseOrientation.Value};
-    t_values.popupmenu_model.String               = handles.popupmenu_model.String{handles.popupmenu_model.Value};
-    t_values.popupmenu_calibration_files.String   = handles.popupmenu_calibration_files.String{handles.popupmenu_calibration_files.Value};
-    t_values.popupmenu_background_mode.String     = handles.popupmenu_background_mode.String{handles.popupmenu_background_mode.Value};
-    t_values.popupmenu_output_mode.String         = handles.popupmenu_output_mode.String{handles.popupmenu_output_mode.Value};
-    
-
-    save([LMT_path filesep S_filename],'t_values')
-    if exist([LMT_path filesep S_filename],'file')== 2
-        disp('Settings saved.')
+    if exist('tsfilename')~=1
+        tsfilename = [];
     end
-end
-
+    LMGUI_SaveSettings_Callback(hObject, eventdata, handles, tsfilename);
 
 % --- If Enable == 'on', executes on mouse press in 5 pixel border.
 % --- Otherwise, executes on mouse press in 5 pixel border or over SaveSettings.
@@ -981,43 +952,9 @@ function SaveSettings_ButtonDownFcn(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-
 % --- Executes on button press in LoadSettings.
 function LoadSettings_Callback(hObject, eventdata, handles, tlfilename)
-% hObject    handle to LoadSettings (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-[LMT_path,~,~] = fileparts(which('LocoMouse_Tracker'));
-LMT_path = [LMT_path filesep 'GUI_Settings'];
-if exist(LMT_path,'dir')~=7
-    mkdir(LMT_path);
-end
-
-if exist('tlfilename')== 1 
-    L_filename = tlfilename;
-else
-    L_filename = uigetfile([LMT_path filesep '*.mat']);
-end
-
-if ischar(L_filename)
-    load([LMT_path filesep L_filename],'t_values');
-
-    tfigObj = fieldnames(t_values);
-
-    for tf = 1:size(tfigObj,1)
-        if isfield(t_values.(tfigObj{tf}),'String')
-            if any(ismember(handles.(tfigObj{tf}).String,t_values.(tfigObj{tf}).String))
-                tval = find(ismember(handles.(tfigObj{tf}).String,t_values.(tfigObj{tf}).String));
-            else
-                warning(['Non-existend setting for ',tfigObj{tf},'!'])
-                tval=1;
-            end
-        else
-            tval = t_values.(tfigObj{tf}).Value;
-        end
-        
-        set(handles.(tfigObj{tf}),'Value',tval);
+    if exist('tlfilename')~=1
+        tlfilename = [];
     end
-end
-
-
+    LMGUI_LoadSettings_Callback(hObject, eventdata, handles, tlfilename);
