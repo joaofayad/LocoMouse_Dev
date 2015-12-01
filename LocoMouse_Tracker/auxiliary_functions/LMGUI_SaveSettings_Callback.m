@@ -1,5 +1,5 @@
 % --- Executes on button press in SaveSettings.
-function LMGUI_SaveSettings(hObject, eventdata, handles, tsfilename)
+function LMGUI_SaveSettings_Callback(handles, tsfilename)
 % hObject    handle to SaveSettings (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -28,7 +28,8 @@ if ischar(S_filename)
                 'popupmenu_model'; ...
                 'popupmenu_calibration_files'; ...
                 'popupmenu_background_mode'; ...
-                'popupmenu_output_mode'};
+                'popupmenu_output_mode'; ...
+                'edit_output_path'};
 
     if ischar(S_filename)
         for tfi = 1:size(tfigObj,1)
@@ -41,7 +42,10 @@ if ischar(S_filename)
 
                     case 'checkbox'
                         t_values.(tfigObj{tfi}).Value     = handles.(tfigObj{tfi}).Value;
-
+                        
+                    case 'edit'
+                        t_values.(tfigObj{tfi}).String = handles.(tfigObj{tfi}).String;
+                        
                     otherwise
                         t_values.(tfigObj{tfi}).Value     = handles.(tfigObj{tfi}).Value;
                 end

@@ -1,6 +1,6 @@
 
 % --- Executes on button press in LoadSettings.
-function LMGUI_LoadSettings_Callback(hObject, eventdata, handles, tlfilename)
+function LMGUI_LoadSettings_Callback(handles, tlfilename)
 % hObject    handle to LoadSettings (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -39,6 +39,10 @@ if ischar(L_filename)
                         
                 case 'checkbox'
                     tval = t_values.(tfigObj{tf}).Value;
+                    
+                case 'edit'
+                    set(handles.(tfigObj{tf}),'String',t_values.(tfigObj{tf}).String);
+                    
                 otherwise
                     tval = t_values.(tfigObj{tf}).Value;
             end

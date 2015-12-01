@@ -7,7 +7,7 @@ function varargout = LocoMouse_Tracker(varargin)
 % Author: Joao Fayad (joao.fayad@neuro.fchampalimaud.org)
 % Last Modified: 17/11/2014
 
-% Last Modified by GUIDE v2.5 26-Nov-2015 11:11:02
+% Last Modified by GUIDE v2.5 01-Dec-2015 11:12:18
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -100,6 +100,7 @@ set(handles.figure1,'userdata',pwd);
                                     handles.pushbutton_add_with_subfolders ...
                                     handles.pushbutton_browse_output ...
                                     handles.pushbutton_remove ...
+                                    handles.pushbutton_clear_filelist ...
                                     handles.popupmenu_background_mode ...
                                     handles.popupmenu_calibration_files ...
                                     handles.popupmenu_model ...
@@ -255,7 +256,7 @@ if ischar(chosen_dir)% Valid dir selection.
             try
                 vid = VideoReader(file_name_f);
                 clear vid
-                fprintf('%s added successfully.\n',file_name_f);
+%                 fprintf('%s added successfully.\n',file_name_f);
             catch
                 %%% Play error sound and write error message on log box!
                 %        updateLog(handles.listbox_log,'Error: Could not open %s with VideoReader','r');
@@ -309,7 +310,7 @@ if ischar(chosen_dir)
             try
                 vid = VideoReader(file_name_ff);
                 clear vid
-                fprintf('%s added successfully.\n',file_name_ff);
+               % fprintf('%s added successfully.\n',file_name_ff);
             catch
                 %%% Play error sound and write error message on log box!
                 %        updateLog(handles.listbox_log,'Error: Could not open %s with VideoReader','r');
@@ -733,7 +734,7 @@ current_pos = get(handles.listbox_files,'Value');
 current_list(current_pos,:) = [];
 N_files = size(current_list,1);
 if N_files  == 0
-    % If list is empty disable the list and the the remove button:
+    % If list is empty disable the list and the remove button:
     handles = changeGUIEnableStatus(handles,'off');
 elseif current_pos > N_files 
     current_pos = size(current_list,1);
@@ -745,7 +746,11 @@ guidata(handles.figure1,handles);
 % --- Enabling/Disabling the GUI properties that depend on the existence of
 % at least one file on the file list.
 function handles = changeGUIEnableStatus(handles,set_value)
-set([handles.pushbutton_remove handles.pushbutton_start handles.listbox_files],'Enable',set_value);
+    handle_list = [ handles.pushbutton_remove, ... 
+                    handles.pushbutton_clear_filelist, ...
+                    handles.pushbutton_start, ...
+                    handles.listbox_files];
+    set(handle_list,'Enable',set_value);
 
 
 % --- Executes on selection change in popupmenu_calibration_files.
@@ -952,7 +957,7 @@ function SaveSettings_Callback(hObject, eventdata, handles, tsfilename)
     if exist('tsfilename')~=1
         tsfilename = [];
     end
-    LMGUI_SaveSettings_Callback(hObject, eventdata, handles, tsfilename);
+    LMGUI_SaveSettings_Callback(handles, tsfilename);
 
 % --- If Enable == 'on', executes on mouse press in 5 pixel border.
 % --- Otherwise, executes on mouse press in 5 pixel border or over SaveSettings.
@@ -966,7 +971,7 @@ function LoadSettings_Callback(hObject, eventdata, handles, tlfilename)
     if exist('tlfilename')~=1
         tlfilename = [];
     end
-    LMGUI_LoadSettings_Callback(hObject, eventdata, handles, tlfilename);
+    LMGUI_LoadSettings_Callback(handles, tlfilename);
 
 
 % --- Executes on button press in checkbox_ExpFigures.
@@ -976,3 +981,12 @@ function checkbox_ExpFigures_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of checkbox_ExpFigures
+
+
+% --- Executes on button press in pushbutton_clear_filelist.
+function pushbutton_clear_filelist_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton_clear_filelist (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.listbox_files,'String',{});
+handles = changeGUIEnableStatus(handles,'off');
