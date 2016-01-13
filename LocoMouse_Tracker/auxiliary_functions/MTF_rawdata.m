@@ -584,6 +584,9 @@ end
 
 
 disp(['flip: ' num2str(data.flip)])
+if data.flip    
+    tracks_final = tracks_final(:,[3 4 1 2 5],:);
+end
 
 % Debug data:
 debug.tracks_bottom = tracks_bottom;
