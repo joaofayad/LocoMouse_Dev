@@ -1,4 +1,4 @@
-function [I,Iaux] = readMouseImage(vid,frame_number,Bkg,flip,scale,ind_warp_mapping,expected_im_size)
+function [I,Iaux] = readMouseImage(varargin)
 % READMOUSEIMAGE Reads a LocoMouse setup image from a MATLAB vid sturcture
 % containing a LocoMouse video file.
 %
@@ -18,6 +18,16 @@ function [I,Iaux] = readMouseImage(vid,frame_number,Bkg,flip,scale,ind_warp_mapp
 % OUTPUT:
 % I: A grayscale image read from vid. If vid is a colour video, the image
 % will be converted to grayscale as colour is not supported.
+
+[vid,frame_number,Bkg,flip,scale,ind_warp_mapping,expected_im_size] = varargin{1:7};
+h_flip      = false;
+split_line  = -1;
+try
+    h_flip = varargin{8};
+    split_line = varargin{9};
+catch
+end
+
 if ischar(vid)
     vid = VideoReader(vid);
 end
@@ -80,10 +90,20 @@ if scale ~= 1
     end
 end
 
-% Flipping it
+% vertical flip
 if flip
     I = I(:,end:-1:1);
     if ~isempty(Iaux)
         Iaux = Iaux(:,end:-1:1);
     end
 end
+
+% horizontal flip of the bottom image
+% if h_flip && split_line > -1
+%     [I_side, I_bottom] = splitImage(I, split_line);
+%     I = [I_side; I_bottom(end:-1:1,:)];
+%      if ~isempty(Iaux)
+%         [I_side, I_bottom] = splitImage(Iaux, split_line);
+%         Iaux = [I_side; I_bottom(end:-1:1,:)];
+%      end
+% end
