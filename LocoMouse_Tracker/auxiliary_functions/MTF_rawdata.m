@@ -1,4 +1,4 @@
-function [tracks_final,tracks_tail,OcclusionGrid,bounding_box,data,debug] = MTF_rawdata(data, model,bb_choice)
+function [final_tracks,tracks_tail,OcclusionGrid,bounding_box,data,debug] = MTF_rawdata(data, model,bb_choice)
 % MTF   Tracks a set of predefined (mouse) features over a given video.
 %
 % INPUT:
@@ -466,7 +466,7 @@ clear tracks_bottom_aux tracks_bottom_aux2
 % Perform bottom view tracking: Tracking is first solved for the bottom
 % view case as that is the simplest and more reliable.
 M = cell(N_pointlike_tracks,1);
-tracks_final = NaN(3,N_pointlike_tracks,N_frames);
+final_tracks = NaN(3,N_pointlike_tracks,N_frames);
 
 for i_point = 1:N_pointlike_features
     % The method used for tracking is not invariant to the order of
@@ -566,15 +566,15 @@ for i_tracks = 1:N_pointlike_tracks
         bottom_cond = M(i_tracks,i_images) <= Ncandidates(i_point,i_images) && M(i_tracks,i_images) > 0;
         top_cond = Mpf_top(i_images) <= Ncandidates_top(i_images) && Mpf_top(i_images) > 0;
         if bottom_cond && top_cond
-            tracks_final(:,i_tracks,i_images) = [tracks_bottom{i_point,i_images}(1:2,M(i_tracks,i_images));tracks_joint2{i_images}(3,Mpf_top(i_images))];
+            final_tracks(:,i_tracks,i_images) = [tracks_bottom{i_point,i_images}(1:2,M(i_tracks,i_images));tracks_joint2{i_images}(3,Mpf_top(i_images))];
         elseif bottom_cond
-            tracks_final(:,i_tracks,i_images) = [tracks_bottom{i_point,i_images}(1:2,M(i_tracks,i_images));NaN];
+            final_tracks(:,i_tracks,i_images) = [tracks_bottom{i_point,i_images}(1:2,M(i_tracks,i_images));NaN];
         end
         
         % Performing Z NMS: Perform this step only if more features of the same
         % detector are used (e.g. perform 3 times for paws).
         if i_tracks < point_check && top_cond
-            temp = tracks_final(:,i_tracks,i_images)';
+            temp = final_tracks(:,i_tracks,i_images)';
             kp = findOverlap(temp(:,[1 3]),tracks_joint{i_point,i_images}([1 3],:)',box_size_point{2},'center',0.5);
             tracks_joint{i_point,i_images}(:,kp) = repmat(zeros(5,1),1,sum(kp));
         end
@@ -584,8 +584,11 @@ end
 
 
 disp(['flip: ' num2str(data.flip)])
-if data.flip    
-    tracks_final = tracks_final(:,[3 4 1 2 5],:);
+if data.flip
+    % Vertical flip of tracks:
+    final_tracks(1,:,:) = vid.Width - final_tracks(1,:,:) + 1;
+    tracks_tail(1,:,:) = vid.Width - tracks_tail(1,:,:) + 1;
+    final_tracks = final_tracks(:,[3 4 1 2 5],:);
 end
 
 % Debug data:
