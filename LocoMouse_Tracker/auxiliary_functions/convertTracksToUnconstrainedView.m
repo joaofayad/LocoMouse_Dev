@@ -1,12 +1,7 @@
 function [tracks_unconstrained,tracks_tail_unconstrained] = convertTracksToUnconstrainedView(final_tracks,tracks_tail,image_size,IDX,flip,scale)
 % CONVERTTRACKSTOUNCONSTRAINEDVIEW Transforms the tracks from the
 % constrained to unconstrained view format.
-if flip
-    % Vertical flip of tracks:
-    final_tracks(1,:,:) = image_size(2) - final_tracks(1,:,:) + 1;
-    tracks_tail(1,:,:) = image_size(2) - tracks_tail(1,:,:) + 1;
-    final_tracks = final_tracks(:,[3 4 1 2 5],:);
-end
+
 
 if scale ~= 1
     % Scaling the tracks:
