@@ -1,6 +1,6 @@
-function [] = MTF_export_figures(final_tracks, tracks_tail, seq_name)
+function [] = MTF_export_figures(final_tracks, tracks_tail, seq_name,data)
 % MTF_export_figures(final_tracks, tail_tracks)
-%
+% Expects "constrained" pixel coordinates.
 % Plots the tracks resulting from the MTF tracker. The default plots are:
 %
 % X vs time/frame for 4 paws.
@@ -12,18 +12,22 @@ function [] = MTF_export_figures(final_tracks, tracks_tail, seq_name)
 % Z vs X for tail
 
 [seq_path,seq_name,~] = fileparts(seq_name);
-
+vid = VideoReader(data.vid);
+f2t = 1/vid.FrameRate;
 % plotting tracks:
 Colors = ['r';'m';'b';'c';'g'];
 Legend = {'FR','HR','FL','HL','T'};
 N_images = size(final_tracks,3);
 
-% X vs time/frame for 4 paws.
+% X vs time or frame for 4 paws.
 fig1 = figure();
 hold on
 for i_paw = 1:4
-    plot(1:N_images,squeeze(final_tracks(1,i_paw,:)),'-','Color',Colors(i_paw,:),'LineWidth',2);
+    plot([1:N_images]*f2t,squeeze(final_tracks(1,i_paw,:)),'-','Color',Colors(i_paw,:),'LineWidth',2);
 end
+title('Paws: x over time')
+xlabel('time [s]')
+ylabel('x position [px]')
 legend(Legend(1:4),'Location','NorthWest');
 set(fig1, 'Position', get(0,'Screensize')); % Maximize figure.
 
@@ -33,10 +37,19 @@ pairs = [1 2;3 4];
 fig2 = figure();
 for i_pairs = 1:2
     subplot(2,1,i_pairs)
+    xlabel('time [s]')
+    ylabel('z position [px]')
     hold on
-    plot(1:N_images,squeeze(final_tracks(3,pairs(i_pairs,1),:)),'-','Color',Colors(pairs(i_pairs,1),:),'LineWidth',2);
-    plot(1:N_images,squeeze(final_tracks(3,pairs(i_pairs,2),:)),'-','Color',Colors(pairs(i_pairs,2),:),'LineWidth',2);
+    plot([1:N_images]*f2t,squeeze(final_tracks(3,pairs(i_pairs,1),:)),'-','Color',Colors(pairs(i_pairs,1),:),'LineWidth',2);
+    plot([1:N_images]*f2t,squeeze(final_tracks(3,pairs(i_pairs,2),:)),'-','Color',Colors(pairs(i_pairs,2),:),'LineWidth',2);
     legend(Legend(pairs(i_pairs,:)),'Location','NorthWest');
+    switch i_pairs
+        case 1
+            title('Front paws Paws: height over time')
+
+        case 2
+            title('Hind paws Paws: height over time')
+    end
     axis ij tight
 end
 set(fig2, 'Position', get(0,'Screensize')); % Maximize figure.
@@ -47,9 +60,21 @@ fig3 = figure();
 idx = {[1 2],[1 3]};
 for i_tail = 1:2
     subplot(2,1,i_tail)
+
+   
     plot(squeeze(tracks_tail(idx{i_tail}(1),:,:))',squeeze(tracks_tail(idx{i_tail}(2),:,:))','-','LineWidth',2);
     legend(type{i_tail},'Location','NorthEast');
-%     axis ij equal tight  
+    
+	xlabel('x position [px]')
+    switch type{i_tail}
+        case 'X vs Z'
+            title('Tail: side view')
+             ylabel('z position [px]')
+        case 'X vs Y'
+            title('Tail: bottom view')
+             ylabel('y position [px]')
+    end
+ 
 end
 set(fig3, 'Position', get(0,'Screensize')); % Maximize figure.
 
