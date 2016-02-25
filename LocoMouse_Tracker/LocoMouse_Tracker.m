@@ -645,6 +645,7 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
+ 
 % --- Function that loads a calibration file and performs a few basic checks:
 function handles = loadCalibrationFile(full_file_path, handles)
 try
