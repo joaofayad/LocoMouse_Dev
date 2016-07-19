@@ -1,0 +1,32 @@
+%YAML:1.0
+#LocoMouse configuration file: Erroneous input will crash the program!
+mode: 1 # 0 - Overground/Ladder; 1 - Treadmill
+location_prior: !!opencv-matrix
+   rows: 5
+   cols: 7
+   dt: d
+   data: [1, 1, 0.6, 0, 1, 0, 1,
+      0, 1, 0.6, 0, 1, 0, 1,
+      1, 0, 0.6, 0, 1, 0, 1,
+      0, 0, 0.6, 0, 1, 0, 1,
+      1, 0.5, 0.2, 0, 1, 0, 1]
+# Alogrithm parameters: Don't change unless certain of what they do.
+#Spacing of the grid max pixel displacement, etc.
+conn_comp_connectivity: 8 #Connectivity for the Connected components algorithm.
+median_filter_size: 11 #Must be an odd integer.
+min_pixel_visible: 0 #Minimum number of visible pixels to consider a valid BB boundary.
+top_bottom_min_overlap: 0.7 #Boxes must overlap for at least 70% for matches to be considered valid.
+maximum_normalized_beacon_distance: 0.4 #Candidates with normalized distance lower than this are suppressed.
+max_displacement: 15 #Maximum displacement in pixels allowed between two frames (There is a velocity component added to this).
+max_displacement_top: 15 # Same as above, for the top view.
+occlusion_grid_spacing_pixels: 20 #Spacing of the occlusion grid in pixels, highly dependent on resolution.
+occlusion_grid_spacing_pixels_top: 20 # Same as above, for the top view.
+#
+body_proportion_bounding_box: 0.75 #The occlusion grid extends for only this percentage of the BB on the right side.
+tail_sub_bounding_box: 0.6 #The percentage counting from the left of the box where the tail is looked for.
+alpha_vel: 0.1 #Relative term for the velocity costs on the match2nd tracking algorithm.
+alpha_vel_top: 100 #Same as above, for the top
+pairwise_occluded_cost: 0.01 #Cost for moving to and between occluded points on the match2nd algorithm.
+moving_average_window: 5 #Must be odd.
+use_reference_image: true #Make true or false to switch on and off
+reference_image_path: 'C:\Users\joaofayad\Documents\Visual Studio 2015\Projects\Locomouse\x64\Release\I_ref_bottom.png' #If it can't be read the program will halt.
