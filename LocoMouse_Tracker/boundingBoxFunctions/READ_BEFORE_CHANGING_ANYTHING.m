@@ -72,7 +72,34 @@
                             0.9,    0.25,   0.3,	0.6,	1.0,	0.0,	0.6   ; ...     % FL paw
                             0.5,	0.25,   0.3,	0.2,	0.85,	0.0,	0.7   ; ...     % HL paw
                             1,      0.5,    0.20,	NaN,	NaN,	NaN,	NaN];           % snout
-    
+
+%% C++ Code:
+% C++ code is run by passing it a 'c++' string instead of a bounding box
+% command. This is checked by the tracking code and the c++ executable is
+% run. FIXME: Implement this properly in the GUI.
+% 
+% ComputeMouseBox_cmd_string{tON} should be
+% {{'c++','cpp_config_file_name.yml'}}
+%% [4] C++ Overground
+tON = tON+1; % don't edit
+ComputeMouseBox_option(tON) = {'C++ Overground'}; 
+ComputeMouseBox_cmd_string(tON) = {{'c++','config.yml'}};  
+
+%% [5] C++ Treadmill
+tON = tON+1; % don't edit
+ComputeMouseBox_option(tON) = {'C++ Tradmill'}; 
+ComputeMouseBox_cmd_string(tON) = {{'c++','config_danatm.yml'}};
+
+%% [6] C++ Head Fixed
+tON = tON+1; % don't edit
+ComputeMouseBox_option(tON) = {'C++ Head Fixed'}; 
+ComputeMouseBox_cmd_string(tON) = {{'c++','config_hf.yml'}};
+
+%% [7] C++ Ladder
+tON = tON+1; % don't edit
+ComputeMouseBox_option(tON) = {'C++ Ladder'}; 
+ComputeMouseBox_cmd_string(tON) = {{'c++','config.yml'}};
+                        
 %%
 save([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'ComputeMouseBox_option','ComputeMouseBox_cmd_string','WeightSettings')
-
+clear('ComputeMouseBox_option','ComputeMouseBox_cmd_string','WeightSettings','tON','ParameterSet','weight_defaults','p_boundingBoxFunctions');

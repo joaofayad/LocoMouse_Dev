@@ -424,19 +424,19 @@ Nfiles = size(file_list,1);
 
 % Calibration file;
 calibration_file_pos = get(handles.popupmenu_calibration_files,'Value');
-calibration_file = get(handles.popupmenu_calibration_files,'String');calibration_file = calibration_file{calibration_file_pos};clear calibration_file_pos;
-handles = loadCalibrationFile(fullfile(handles.root_path,'calibration_files',[calibration_file '.mat']),handles);clear calibration_file
+calibration_file = get(handles.popupmenu_calibration_files,'String');calibration_file = calibration_file{calibration_file_pos};
+handles = loadCalibrationFile(fullfile(handles.root_path,'calibration_files',[calibration_file '.mat']),handles);
 
 % Model file:
 model_file_pos = get(handles.popupmenu_model,'Value');
-model_file = get(handles.popupmenu_model,'String');model_file = model_file{model_file_pos};clear model_file_pos;
-handles = loadModel(fullfile(handles.root_path,'model_files',[model_file '.mat']),handles); clear model_file
+model_file = get(handles.popupmenu_model,'String');model_file = model_file{model_file_pos};
+handles = loadModel(fullfile(handles.root_path,'model_files',[model_file '.mat']),handles);
 
 % Output and background functions:
 bkg_mode = get(handles.popupmenu_background_mode,'Value');
 output_mode = get(handles.popupmenu_output_mode,'Value');
-bkg_fun = get(handles.popupmenu_background_mode,'String');bkg_fun = bkg_fun{bkg_mode};clear bkg_mode
-output_fun = get(handles.popupmenu_output_mode,'String');output_fun = output_fun{output_mode};clear output_mode
+bkg_fun = get(handles.popupmenu_background_mode,'String');bkg_fun = bkg_fun{bkg_mode};
+output_fun = get(handles.popupmenu_output_mode,'String');output_fun = output_fun{output_mode};
 
 % Reading output path:
 output_path = get(handles.edit_output_path,'String');
@@ -454,6 +454,17 @@ error_counter = 0;
 
 total_time = tic;
 
+% Checking if running C++ code: [joaofayad]
+bb_choice = get(handles.BoundingBox_choice,'Value');
+[p_boundingBoxFunctions, ~, ~]=fileparts(which('computeMouseBox')); % find the folder containing BoundingBoxOptions.mat
+load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'ComputeMouseBox_cmd_string','ComputeMouseBox_option'); % load bounding box option information
+if iscell(ComputeMouseBox_cmd_string{bb_choice})
+    cpp = true;
+    cpp_config_file = fullfile(handles.root_path,'auxiliary_functions','cpp',ComputeMouseBox_cmd_string{bb_choice}{2});
+else
+    cpp = false;
+end
+
 for i_files = 1:Nfiles
     disp('----------------------');
     tic;
@@ -464,7 +475,7 @@ for i_files = 1:Nfiles
   
     data_file_name = fullfile(out_path_data,[trial_name '.mat']);
     image_file_name = fullfile(out_path_image,[trial_name '.png']);
-    clear trial_name;
+    %clear trial_name;
     
     % Check if data folder exists:
     if ~exist(out_path_data,'dir')
@@ -487,7 +498,7 @@ for i_files = 1:Nfiles
         try
             current_file_time = tic;
             fprintf('Tracking %s ...\n',file_name)
-            handles.data.bkg = bkg_file;clear bkg_file;
+            handles.data.bkg = bkg_file;
             handles.data.vid = file_name;
             
 %            LocoMouse_Tracker handles.data.flip = false; % added by HGM for the treadmill
@@ -500,7 +511,21 @@ for i_files = 1:Nfiles
                     handles.data.flip = true;
             end
             
-            [final_tracks_c,tracks_tail_c,OcclusionGrid,bounding_box,handles.data,debug] = MTF_rawdata(handles.data, handles.model, handles.BoundingBox_choice.Value);
+            if cpp
+                if (handles.MouseOrientation.Value == 1)
+                    error('Autodetect does not work with C++!');
+                end
+                if ispc
+                    cpp_exect = fullfile(handles.root_path,'auxiliary_functions','cpp','Locomouse.exe');
+                    calib = rmfield(handles.data,{'vid','bkg','flip'});
+                    [final_tracks_c, tracks_tail_c,OcclusionGrid,bounding_box,handles.data,debug] = locomouse_tracker_cpp_wrapper(handles.data,handles.root_path,handles.model, calib, handles.data.flip, model_file, calibration_file, cpp_exect, cpp_config_file);
+                else
+                    error('Only windows is supported so far. Compile the C++ code in the current platform and insert the call here.');
+                end
+                
+            else
+                [final_tracks_c,tracks_tail_c,OcclusionGrid,bounding_box,handles.data,debug] = MTF_rawdata(handles.data, handles.model, handles.BoundingBox_choice.Value);
+            end
             [final_tracks,tracks_tail] = convertTracksToUnconstrainedView(final_tracks_c,tracks_tail_c,size(handles.data.ind_warp_mapping),handles.data.ind_warp_mapping,handles.data.flip,handles.data.scale);
             % clearing the background image to avoid problems:
             
@@ -521,7 +546,8 @@ for i_files = 1:Nfiles
             fprintf('Done. Elapsed time: ')
             disp(datestr(datenum(0,0,0,0,0,toc(current_file_time)),'HH:MM:SS'));
         catch tracking_error
-            displayErrorGui(tracking_error);
+            error_report = getReport(tracking_error,'extended');
+            disp(error_report);
             error_counter = error_counter + 1;
         end
             disp('----------------------');
@@ -537,7 +563,7 @@ for i_files = 1:Nfiles
 end
 fprintf('%d out of %d files correctly processed.\n',Nfiles-error_counter,Nfiles);
 fprintf('Total run time: ');
-disp(datestr(datenum(0,0,0,0,0,toc),'HH:MM:SS'))
+disp(datestr(datenum(0,0,0,0,0,toc(total_time)),'HH:MM:SS'))
 disp('------------------[Tracking END]----');
 set(handles.disable_with_start,'Enable','on');
 set(handles.enable_with_start,'Enable','off');

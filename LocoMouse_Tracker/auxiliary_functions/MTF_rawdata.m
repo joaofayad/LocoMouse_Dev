@@ -134,7 +134,7 @@ for i_point = 1:N_pointlike_features
 end
 N_pointlike_tracks = sum(N_features_per_point_track);
 
-% Structures that remain after the parfor loop:
+% Structures that remain after the for loop:
 tracks_tail = zeros(3,N_tail_points,N_frames);
 tracks_joint = cell(N_pointlike_features,N_frames);
 tracks_bottom = cell(N_pointlike_features,N_frames);
@@ -217,7 +217,7 @@ end
 WS=load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'WeightSettings');
 tweight =  WS.WeightSettings{bb_choice};
 % Looping over all the images
-% warning('PARFOR changed to FOR for debugging reasons. [DE]')
+% warning('for changed to FOR for debugging reasons. [DE]')
 parfor i_images = 1:N_frames
 %     warning('function breaking debugging edit. [DE]')
 %     i_images=ceil(N_frames/2);
@@ -444,12 +444,12 @@ end
 % clear Bkg N_tail_points detection_threshold_point detection_threshold_tail tail_x_threshold bounding_box_dim
 
 %% Computing pairwise potentials:
-% Due to the way parfor works we cannot access entry i and i+1 of the same
+% Due to the way for works we cannot access entry i and i+1 of the same
 % cell array without huge overhead. Therefore we sacrifice a bit of memory
 % and create an auxiliary structure where each index accesses two frames at
 % the time.
 %
-% Emircal tests have shown that a parfor loop only pays off if if sequence
+% Emircal tests have shown that a for loop only pays off if if sequence
 % the sequence is relatively large (~400 frames) but that is usually the
 % case.
 
@@ -561,7 +561,7 @@ for i_tracks = 1:N_pointlike_tracks
     % Tracking:
     Mpf_top = match2nd (Unary_top(i_tracks,:), Pairwise_top(i_tracks,:), [],Nong_top, 0);
     
-    for i_images = 1:N_frames
+    parfor i_images = 1:N_frames
         % Reading the final tracks:
         bottom_cond = M(i_tracks,i_images) <= Ncandidates(i_point,i_images) && M(i_tracks,i_images) > 0;
         top_cond = Mpf_top(i_images) <= Ncandidates_top(i_images) && Mpf_top(i_images) > 0;
