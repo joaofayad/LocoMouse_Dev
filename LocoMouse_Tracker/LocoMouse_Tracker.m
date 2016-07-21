@@ -12,11 +12,11 @@ function varargout = LocoMouse_Tracker(varargin)
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
-                   'gui_Singleton',  gui_Singleton, ...
-                   'gui_OpeningFcn', @LocoMouse_Tracker_OpeningFcn, ...
-                   'gui_OutputFcn',  @LocoMouse_Tracker_OutputFcn, ...
-                   'gui_LayoutFcn',  [] , ...
-                   'gui_Callback',   []);
+    'gui_Singleton',  gui_Singleton, ...
+    'gui_OpeningFcn', @LocoMouse_Tracker_OpeningFcn, ...
+    'gui_OutputFcn',  @LocoMouse_Tracker_OutputFcn, ...
+    'gui_LayoutFcn',  [] , ...
+    'gui_Callback',   []);
 if nargin && ischar(varargin{1})
     gui_State.gui_Callback = str2func(varargin{1});
 end
@@ -65,7 +65,7 @@ set(handles.popupmenu_background_mode,'String',bkg_list);clear bkg_list;
 output_list = rdir(fullfile(handles.root_path,'output_parse_functions','*.m'),'',fullfile(handles.root_path,['output_parse_functions' filesep]));
 output_list = strrep({output_list(:).name},'.m','');
 if isempty(output_list)
-   output_list = {''}; 
+    output_list = {''};
 end
 set(handles.popupmenu_output_mode,'String',output_list);clear output_list
 
@@ -73,7 +73,7 @@ set(handles.popupmenu_output_mode,'String',output_list);clear output_list
 idx_list = rdir(fullfile(handles.root_path,'calibration_files','*.mat'),'',fullfile(handles.root_path,['calibration_files' filesep]));
 idx_list = strrep({idx_list(:).name},'.mat','');
 if isempty(idx_list)
-   idx_list = {''}; 
+    idx_list = {''};
 end
 set(handles.popupmenu_calibration_files,'String',idx_list);clear idx_list
 
@@ -81,7 +81,7 @@ set(handles.popupmenu_calibration_files,'String',idx_list);clear idx_list
 model_list = rdir(fullfile(handles.root_path,'model_files','*.mat'),'',fullfile(handles.root_path,['model_files' filesep]));
 model_list = strrep({model_list(:).name},'.mat','');
 if isempty(model_list)
-   model_list = {' '}; 
+    model_list = {' '};
 end
 set(handles.popupmenu_model,'String',model_list);clear model_list
 
@@ -90,29 +90,29 @@ set(handles.edit_output_path,'String',pwd);
 set(handles.figure1,'userdata',pwd);
 
 % Set of handles that are disabled uppon tracking:
-    handles.disable_with_start = [  handles.pushbutton_start ... 
-                                    handles.pushbutton_add_background_mode ...
-                                    handles.pushbutton_add_calibration_file ...
-                                    handles.pushbutton_add_file ...
-                                    handles.pushbutton_add_folder ...
-                                    handles.pushbutton_add_model ...
-                                    handles.pushbutton_add_output_mode ...
-                                    handles.pushbutton_add_with_subfolders ...
-                                    handles.pushbutton_browse_output ...
-                                    handles.pushbutton_remove ...
-                                    handles.pushbutton_clear_filelist ...
-                                    handles.popupmenu_background_mode ...
-                                    handles.popupmenu_calibration_files ...
-                                    handles.popupmenu_model ...
-                                    handles.popupmenu_output_mode ...
-                                    handles.edit_output_path ...
-                                    handles.checkbox_overwrite_results ...
-                                    handles.checkbox_ExpFigures ...
-                                    handles.BoundingBox_choice ...
-                                    handles.MouseOrientation ...
-                                    handles.LoadSettings ...
-                                    handles.SaveSettings ...
-                                    ];
+handles.disable_with_start = [  handles.pushbutton_start ...
+    handles.pushbutton_add_background_mode ...
+    handles.pushbutton_add_calibration_file ...
+    handles.pushbutton_add_file ...
+    handles.pushbutton_add_folder ...
+    handles.pushbutton_add_model ...
+    handles.pushbutton_add_output_mode ...
+    handles.pushbutton_add_with_subfolders ...
+    handles.pushbutton_browse_output ...
+    handles.pushbutton_remove ...
+    handles.pushbutton_clear_filelist ...
+    handles.popupmenu_background_mode ...
+    handles.popupmenu_calibration_files ...
+    handles.popupmenu_model ...
+    handles.popupmenu_output_mode ...
+    handles.edit_output_path ...
+    handles.checkbox_overwrite_results ...
+    handles.checkbox_ExpFigures ...
+    handles.BoundingBox_choice ...
+    handles.MouseOrientation ...
+    handles.LoadSettings ...
+    handles.SaveSettings ...
+    ];
 
 handles.enable_with_start = handles.pushbutton_stop;
 
@@ -128,24 +128,24 @@ set(handles.figure1,'CloseRequestFcn',@LocoMouse_closeRequestFcn);
 
 % Loading latest settings
 
-    [LMT_path,~,~] = fileparts(which('LocoMouse_Tracker'));
-    LMT_path = [LMT_path filesep 'GUI_Settings'];
-    if exist(LMT_path,'dir')==7
-        if exist([LMT_path filesep 'GUI_Recovery_Settings.mat'],'file') == 2
-            LoadSettings_Callback(hObject, eventdata, handles, 'GUI_Recovery_Settings.mat')
-        end
+[LMT_path,~,~] = fileparts(which('LocoMouse_Tracker'));
+LMT_path = [LMT_path filesep 'GUI_Settings'];
+if exist(LMT_path,'dir')==7
+    if exist([LMT_path filesep 'GUI_Recovery_Settings.mat'],'file') == 2
+        LoadSettings_Callback(hObject, eventdata, handles, 'GUI_Recovery_Settings.mat')
     end
+end
 
 % UIWAIT makes LocoMouse_Tracker wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
 
 function LocoMouse_closeRequestFcn(hObject, eventdata)
-    handles = guidata(gcbo);
-    SaveSettings_Callback(hObject, eventdata, handles, 'GUI_Recovery_Settings.mat') 
-    delete(gcbo)
+handles = guidata(gcbo);
+SaveSettings_Callback(hObject, eventdata, handles, 'GUI_Recovery_Settings.mat')
+delete(gcbo)
 
 % --- Outputs from this function are returned to the command line.
-function varargout = LocoMouse_Tracker_OutputFcn(hObject, eventdata, handles) 
+function varargout = LocoMouse_Tracker_OutputFcn(hObject, eventdata, handles)
 % varargout  cell array for returning output args (see VARARGOUT);
 % hObject    handle to figure
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -196,17 +196,17 @@ if ischar(chosen_file)
     %%% FIXME: See how this was done in other GUIs
     
     % Try to read the file with video reader:
-    try 
+    try
         vid = VideoReader(chosen_fullfile);
         drawnow;
         clear vid
         waitForProcess(handles,'on',values);
     catch
-       %%% Play error sound and write error message on log box!
-%        updateLog(handles.listbox_log,'Error: Could not open %s with VideoReader','r'); 
-       fprintf('Error: Could not open %s with VideoReader!\n',chosen_fullfile);
-       waitForProcess(handles,'on',values);
-       return;
+        %%% Play error sound and write error message on log box!
+        %        updateLog(handles.listbox_log,'Error: Could not open %s with VideoReader','r');
+        fprintf('Error: Could not open %s with VideoReader!\n',chosen_fullfile);
+        waitForProcess(handles,'on',values);
+        return;
     end
     
     % Add file to file listbox:
@@ -256,7 +256,7 @@ if ischar(chosen_dir)% Valid dir selection.
             try
                 vid = VideoReader(file_name_f);
                 clear vid
-%                 fprintf('%s added successfully.\n',file_name_f);
+                %                 fprintf('%s added successfully.\n',file_name_f);
             catch
                 %%% Play error sound and write error message on log box!
                 %        updateLog(handles.listbox_log,'Error: Could not open %s with VideoReader','r');
@@ -310,7 +310,7 @@ if ischar(chosen_dir)
             try
                 vid = VideoReader(file_name_ff);
                 clear vid
-               % fprintf('%s added successfully.\n',file_name_ff);
+                % fprintf('%s added successfully.\n',file_name_ff);
             catch
                 %%% Play error sound and write error message on log box!
                 %        updateLog(handles.listbox_log,'Error: Could not open %s with VideoReader','r');
@@ -326,7 +326,7 @@ if ischar(chosen_dir)
     file_list = char(file_list(kp_f));
     current_list = get(handles.listbox_files,'String');
     if (isempty(current_list)) && (~isempty(file_list) > 0)
-        handles = changeGUIEnableStatus(handles,'on'); 
+        handles = changeGUIEnableStatus(handles,'on');
     end
     set(handles.listbox_files,'String',cat(1,current_list,{file_list}));
 end
@@ -450,7 +450,6 @@ catch
 end
 drawnow;
 fprintf('Processing %d video files:\n',Nfiles);
-error_counter = 0;
 
 total_time = tic;
 
@@ -465,14 +464,57 @@ else
     cpp = false;
 end
 
-for i_files = 1:Nfiles
-    disp('----------------------');
-    tic;
+% Checking which side the mouse faces:
+switch handles.MouseOrientation.Value
+    case 2
+        handles.data.flip = 'LR';
+    case 3
+        handles.data.flip = false;
+    case 4
+        handles.data.flip = true;
+end
+
+successful_tracking = true(1,Nfiles);
+
+if cpp
+    
+    if (handles.MouseOrientation.Value == 1)
+        error('Autodetect does not work with C++!');
+    end
+    
+    % CPP code:
+    data = handles.data;
+    root_path = handles.root_path;
+    overwrite_results = handles.checkbox_overwrite_results;
+    export_figures = handles.checkbox_ExpFigures.Value;
+    model = handles.model;
+    parfor i_files = 1:Nfiles
+        file_name = char(strtrim(file_list{i_files}));
+        successful_tracking(i_files) = track_MATLB_CPP(data, model,model_file, calibration_file, root_path, file_name, output_fun, output_path, bkg_fun, overwrite_results, export_figures,[], cpp, cpp_config_file);
+    end
+else
+    % MATLAB code:
+    for i_files = 1:Nfiles
+        file_name = char(strtrim(file_list{i_files}));
+        successful_tracking(i_files) = track_MATLB_CPP(handles.data,handles.model,model_file,calibration_file, handles.root_path,file_name, output_fun, output_path, bkg_fun, handles.checkbox_overwrite_results,  handles.checkbox_ExpFigures.Value, handles.BoundingBox_choice.Value, cpp, '');
+    end
+end
+fprintf('%d out of %d files correctly processed.\n',sum(successful_tracking),Nfiles);
+fprintf('Total run time: ');
+disp(datestr(datenum(0,0,0,0,0,toc(total_time)),'HH:MM:SS'))
+disp('------------------[Tracking END]----');
+set(handles.disable_with_start,'Enable','on');
+set(handles.enable_with_start,'Enable','off');
+                                                                                                    
+function successful_tracking = track_MATLB_CPP(data, model,model_file, calibration_file, root_path, file_name,output_fun, output_path, bkg_fun, checkbox_overwrite_results,export_figures,bounding_box_choice,cpp,cpp_config_file)
+current_file_time = tic;
+try
+    successful_tracking = true;
     % Going over the file list:
-    file_name = char(strtrim(file_list{i_files}));
+    % file_name = char(strtrim(file_list{i_files}));
     [~,trial_name,~] = fileparts(file_name);
     [out_path_data,out_path_image] = feval(output_fun,output_path,file_name);
-  
+    
     data_file_name = fullfile(out_path_data,[trial_name '.mat']);
     image_file_name = fullfile(out_path_image,[trial_name '.png']);
     %clear trial_name;
@@ -486,7 +528,7 @@ for i_files = 1:Nfiles
         mkdir(out_path_image);
     end
     
-    if get(handles.checkbox_overwrite_results,'Value') || ...
+    if get(checkbox_overwrite_results,'Value') || ...
             (~exist(data_file_name,'file') && ~exist(image_file_name,'file'))
         % If not overwriting results, checking if files exist.
         bkg_file = feval(bkg_fun,file_name);
@@ -495,78 +537,52 @@ for i_files = 1:Nfiles
         end
         
         % Attempting to track:
-        try
-            current_file_time = tic;
-            fprintf('Tracking %s ...\n',file_name)
-            handles.data.bkg = bkg_file;
-            handles.data.vid = file_name;
-            
-%            LocoMouse_Tracker handles.data.flip = false; % added by HGM for the treadmill
-            switch handles.MouseOrientation.Value
-                case 2
-                    handles.data.flip = 'LR';
-                case 3
-                    handles.data.flip = false;
-                case 4
-                    handles.data.flip = true;
-            end
-            
-            if cpp
-                if (handles.MouseOrientation.Value == 1)
-                    error('Autodetect does not work with C++!');
-                end
-                if ispc
-                    cpp_exect = fullfile(handles.root_path,'auxiliary_functions','cpp','Locomouse.exe');
-                    calib = rmfield(handles.data,{'vid','bkg','flip'});
-                    [final_tracks_c, tracks_tail_c,OcclusionGrid,bounding_box,handles.data,debug] = locomouse_tracker_cpp_wrapper(handles.data,handles.root_path,handles.model, calib, handles.data.flip, model_file, calibration_file, cpp_exect, cpp_config_file);
-                else
-                    error('Only windows is supported so far. Compile the C++ code in the current platform and insert the call here.');
-                end
-                
+        fprintf('Tracking %s ...\n',file_name)
+        data.bkg = bkg_file;
+        data.vid = file_name;
+               
+        if cpp
+            if ispc
+                cpp_exect = fullfile(root_path,'auxiliary_functions','cpp','Locomouse.exe');
+                calib = rmfield(data,{'vid','bkg','flip'});
+                [final_tracks_c, tracks_tail_c,OcclusionGrid,bounding_box,data,debug] = locomouse_tracker_cpp_wrapper(data,root_path,model, calib, data.flip, model_file, calibration_file, cpp_exect, cpp_config_file);
             else
-                [final_tracks_c,tracks_tail_c,OcclusionGrid,bounding_box,handles.data,debug] = MTF_rawdata(handles.data, handles.model, handles.BoundingBox_choice.Value);
-            end
-            [final_tracks,tracks_tail] = convertTracksToUnconstrainedView(final_tracks_c,tracks_tail_c,size(handles.data.ind_warp_mapping),handles.data.ind_warp_mapping,handles.data.flip,handles.data.scale);
-            % clearing the background image to avoid problems:
-            
-            % Saving tracking data:
-            data = handles.data;
-            save(data_file_name,'final_tracks','tracks_tail','final_tracks_c','tracks_tail_c','OcclusionGrid','bounding_box','debug','data');
-            
-            % Saving data plot figures
-            if handles.checkbox_ExpFigures.Value
-                MTF_export_figures(final_tracks_c, tracks_tail_c, data_file_name, data);
+                error('Only windows is supported so far. Compile the C++ code in the current platform and insert the call here.');
             end
             
-            % FIXME Performing swing and stance detection:
-            
-            % --- ending it:
-            clear data;
-
-            fprintf('Done. Elapsed time: ')
-            disp(datestr(datenum(0,0,0,0,0,toc(current_file_time)),'HH:MM:SS'));
-        catch tracking_error
-            error_report = getReport(tracking_error,'extended');
-            disp(error_report);
-            error_counter = error_counter + 1;
+        else
+            [final_tracks_c,tracks_tail_c,OcclusionGrid,bounding_box,data,debug] = MTF_rawdata(data, model, bounding_box_choice);
         end
-            disp('----------------------');
-            handles.data.bkg = '';
-            handles.data.vid = '';
-            if isfield(handles.data,'flip')
-                handles.data = rmfield(handles.data,'flip');
-            end
-    else
+        [final_tracks,tracks_tail] = convertTracksToUnconstrainedView(final_tracks_c,tracks_tail_c,size(data.ind_warp_mapping),data.ind_warp_mapping,data.flip,data.scale);
+        % clearing the background image to avoid problems:
+        
+        % Saving tracking data:
+        save(data_file_name,'final_tracks','tracks_tail','final_tracks_c','tracks_tail_c','OcclusionGrid','bounding_box','debug','data');
+        
+        % Saving data plot figures
+        if export_figures
+            MTF_export_figures(final_tracks_c, tracks_tail_c, data_file_name, data);
+        end
+        
+        % FIXME Performing swing and stance detection:
+        
+        % --- ending it:
+        clear data;
+        disp('----------------------');
+        disp('Done. Elapsed time: ')
+        disp(datestr(datenum(0,0,0,0,0,toc(current_file_time)),'HH:MM:SS'));
+        disp('----------------------');
+     else
         fprintf('%s has already been tracked. To re-track check the "Overwrite existing results" box.\n',file_name);
     end
-
+catch tracking_error
+    error_report = getReport(tracking_error,'extended');
+    disp('----------------------');
+    disp(error_report);
+    disp('----------------------');
+    successful_tracking = false;
 end
-fprintf('%d out of %d files correctly processed.\n',Nfiles-error_counter,Nfiles);
-fprintf('Total run time: ');
-disp(datestr(datenum(0,0,0,0,0,toc(total_time)),'HH:MM:SS'))
-disp('------------------[Tracking END]----');
-set(handles.disable_with_start,'Enable','on');
-set(handles.enable_with_start,'Enable','off');
+
 
 % --- Executes on button press in pushbutton_stop.
 function pushbutton_stop_Callback(hObject, eventdata, handles)
@@ -671,7 +687,7 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
- 
+
 % --- Function that loads a calibration file and performs a few basic checks:
 function handles = loadCalibrationFile(full_file_path, handles)
 try
@@ -681,18 +697,18 @@ try
     name_fields = {'ind_warp_mapping','inv_ind_warp_mapping','mirror_line','split_line'};
     
     tfields = fieldnames(data);
-        
+    
     for i_f = 1:size(name_fields,2)
         tfoundfield(i_f) =any(ismember(name_fields(i_f),tfields));
     end
     allfields = all(tfoundfield([1,2])) && any(tfoundfield([3 4]));
     if ~allfields
-         fprintf('ERROR: Incomplete model file.')
+        fprintf('ERROR: Incomplete model file.')
     else
         if tfoundfield(3) && ~tfoundfield(4)
             data.split_line = data.mirror_line;
             fprintf('WARNING: Outdated fieldname "mirror_line" should be renamed to "split_line".')
-            disp(full_file_path);     
+            disp(full_file_path);
         end
         if ~isfield(data,'scale')
             data.scale = 1;
@@ -722,7 +738,7 @@ N_files = size(current_list,1);
 if N_files  == 0
     % If list is empty disable the list and the remove button:
     handles = changeGUIEnableStatus(handles,'off');
-elseif current_pos > N_files 
+elseif current_pos > N_files
     current_pos = size(current_list,1);
 end
 set(handles.listbox_files,'String',current_list);
@@ -732,11 +748,11 @@ guidata(handles.figure1,handles);
 % --- Enabling/Disabling the GUI properties that depend on the existence of
 % at least one file on the file list.
 function handles = changeGUIEnableStatus(handles,set_value)
-    handle_list = [ handles.pushbutton_remove, ... 
-                    handles.pushbutton_clear_filelist, ...
-                    handles.pushbutton_start, ...
-                    handles.listbox_files];
-    set(handle_list,'Enable',set_value);
+handle_list = [ handles.pushbutton_remove, ...
+    handles.pushbutton_clear_filelist, ...
+    handles.pushbutton_start, ...
+    handles.listbox_files];
+set(handle_list,'Enable',set_value);
 
 
 % --- Executes on selection change in popupmenu_calibration_files.
@@ -785,10 +801,10 @@ if ischar(load_file)
         succ = copyfile(file_path,db_file_path);
         if ~succ
             error('Could not copy %s to local folder!\n',file_path)
-%             warning('Could not copy %s to local folder. Attempting to proceed with current location...\n');
-%             list{length(list)+1} = file_path;
+            %             warning('Could not copy %s to local folder. Attempting to proceed with current location...\n');
+            %             list{length(list)+1} = file_path;
         else
-            % Refresh the popup list: 
+            % Refresh the popup list:
             list{length(list)+1} = fname;
         end
         set(handles.popupmenu_model,'String',list);
@@ -849,7 +865,7 @@ if ischar(load_file)
         if ~succ
             error('Could not copy %s to local folder!\n',file_path)
         else
-            % Refresh the popup list: 
+            % Refresh the popup list:
             list{length(list)+1} = fname;
         end
         set(handles.popupmenu_calibration_files,'String',list);
@@ -879,7 +895,7 @@ switch state
         set(handles.figure1,'Pointer','watch');
         set(handles.disable_while_running,'Enable','off');
         drawnow;
-    otherwise 
+    otherwise
         error('Unknown option!');
 end
 
@@ -932,7 +948,7 @@ if isempty(p_boundingBoxFunctions)
     error('INITIALIZATION ERROR: computeMouseBox.m is missing.')
 end
 load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'ComputeMouseBox_option');
-set(hObject,'String',ComputeMouseBox_option); 
+set(hObject,'String',ComputeMouseBox_option);
 
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
@@ -940,10 +956,10 @@ end
 
 % --- Executes on button press in SaveSettings.
 function SaveSettings_Callback(hObject, eventdata, handles, tsfilename)
-    if exist('tsfilename')~=1
-        tsfilename = [];
-    end
-    LMGUI_SaveSettings_Callback(handles, tsfilename);
+if exist('tsfilename')~=1
+    tsfilename = [];
+end
+LMGUI_SaveSettings_Callback(handles, tsfilename);
 
 % --- If Enable == 'on', executes on mouse press in 5 pixel border.
 % --- Otherwise, executes on mouse press in 5 pixel border or over SaveSettings.
@@ -954,10 +970,10 @@ function SaveSettings_ButtonDownFcn(hObject, eventdata, handles)
 
 % --- Executes on button press in LoadSettings.
 function LoadSettings_Callback(hObject, eventdata, handles, tlfilename)
-    if exist('tlfilename')~=1
-        tlfilename = [];
-    end
-    LMGUI_LoadSettings_Callback(handles, tlfilename);
+if exist('tlfilename')~=1
+    tlfilename = [];
+end
+LMGUI_LoadSettings_Callback(handles, tlfilename);
 
 
 % --- Executes on button press in checkbox_ExpFigures.
