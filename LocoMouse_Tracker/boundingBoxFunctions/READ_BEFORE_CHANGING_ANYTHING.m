@@ -87,8 +87,8 @@ ComputeMouseBox_cmd_string(tON) = {{'c++','config.yml'}};
 
 %% [5] C++ Treadmill
 tON = tON+1; % don't edit
-ComputeMouseBox_option(tON) = {'C++ Tradmill'}; 
-ComputeMouseBox_cmd_string(tON) = {{'c++','config_danatm.yml'}};
+ComputeMouseBox_option(tON) = {'C++ Treadmill'}; 
+ComputeMouseBox_cmd_string(tON) = {{'c++','config_tm.yml'}};
 
 %% [6] C++ Head Fixed
 tON = tON+1; % don't edit
