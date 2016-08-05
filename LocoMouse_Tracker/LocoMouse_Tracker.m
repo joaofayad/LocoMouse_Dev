@@ -501,7 +501,12 @@ for i_files = 1:Nfiles
             end
             
             [final_tracks_c,tracks_tail_c,OcclusionGrid,bounding_box,handles.data,debug] = MTF_rawdata(handles.data, handles.model, handles.BoundingBox_choice.Value);
+           try
             [final_tracks,tracks_tail] = convertTracksToUnconstrainedView(final_tracks_c,tracks_tail_c,size(handles.data.ind_warp_mapping),handles.data.ind_warp_mapping,handles.data.flip,handles.data.scale);
+           catch
+               disp('moep!')
+           end
+            
             % clearing the background image to avoid problems:
             
             % Saving tracking data:
@@ -510,7 +515,9 @@ for i_files = 1:Nfiles
             
             % Saving data plot figures
             if handles.checkbox_ExpFigures.Value
+                
                 MTF_export_figures(final_tracks_c, tracks_tail_c, data_file_name, data);
+                
             end
             
             % FIXME Performing swing and stance detection:

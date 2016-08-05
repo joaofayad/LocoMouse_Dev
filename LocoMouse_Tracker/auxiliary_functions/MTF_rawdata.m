@@ -160,15 +160,33 @@ disp(['Using bounding box option "',char(ComputeMouseBox_option(bb_choice)),'"']
 tcmd_string = strtrim(char(ComputeMouseBox_cmd_string(bb_choice)));
 disp(['(',tcmd_string,')']);
 parfor i_images = 1:N_frames
-    [~,Iaux] = readMouseImage(vid,i_images,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
+    
+    % CODE TESTING [DE]
+    contrast_template = 'C:\Users\Dennis\Documents\DATA_DarkvsLight_Overground\Contrast_Template.mat';
+    [I,Iaux] = readMouseImage( ...
+        vid,...
+        i_images,...
+        Bkg,...
+        data.flip,...
+        scale,...
+        ind_warp_mapping,...
+        expected_im_size,...
+        'contrast_template',...
+        contrast_template);
+    % -----------------------------------------------------------------------------------------------
+    
+    %[I,Iaux] = readMouseImage(vid,i_images,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
+    
+    
+    
     % To change bounding box computation, see READ_BEFORE_CHANGING_ANYTHING.m 
     % in ... \LocoMouse_Dev\LocoMouse_Tracker\boundingBoxFunctions  [DE]
     [bounding_box(:,:,i_images),~,~] = Call_computeMouseBox(Iaux, split_line,tcmd_string); % Call_computeMouseBox executes eval(tcmd_string)
-    bdymasscenter(i_images,:) = computebdymass(Iaux,split_line); % calculates the center of mass of the silhouette of the mouse [GF]
+    bdymasscenter(i_images,:) = computebdymass(I,split_line); % calculates the center of mass of the silhouette of the mouse [GF]
 end
 
 % Take mean box size and add 3 standard deviations:
-% bounding_box_dim is defined as smalles box between the largest observed
+% bounding_box_dim is defined as smallest box between the largest observed
 % and the mean+3*std box;
 
 bounding_box_dim = round(nanmin(nanmean(bounding_box(2,:,:),3) + 3 * nanstd(bounding_box(2,:,:),0,3), nanmax(bounding_box(2,:,:),[],3)))';
@@ -224,7 +242,22 @@ parfor i_images = 1:N_frames
    %% Reading images from video and preprocessing data:
    % disp(['frame: ',num2str(i_images)]);
     bounding_box_i = bounding_box(:,i_images);
-    [~,Iaux] = readMouseImage(vid,i_images,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
+    
+    % CODE TESTING [DE]
+    contrast_template = 'C:\Users\Dennis\Documents\DATA_DarkvsLight_Overground\Contrast_Template.mat';
+    [~,Iaux] = readMouseImage( ...
+        vid,...
+        i_images,...
+        Bkg,...
+        data.flip,...
+        scale,...
+        ind_warp_mapping,...
+        expected_im_size,...
+        'contrast_template',...
+        contrast_template);
+    % -----------------------------------------------------------------------------------------------
+        
+    % [~,Iaux] = readMouseImage(vid,i_images,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
     I_cell = cell(1,2);
     [I_cell{[2 1]}] = splitImage(Iaux,split_line);
     
@@ -327,6 +360,8 @@ parfor i_images = 1:N_frames
                     D2{1}(:,2) = D2{1}(:,2) + max(OFFSET(1),0);
                     D2{1}(:,1) = D2{1}(:,1) + split_line + max(OFFSET(2),0);
                     tracks_bottom{i_point,i_images} = [D2{1}(:,[2 1])';scores{i_views}];
+                    
+                    
                 else
                     % Applying a more conservative non-maxima suppression
                     % algorithm for the side view:
@@ -370,7 +405,25 @@ parfor i_images = 1:N_frames
                 % increase separation accuracy. This method works well if
                 % one paw is static and another moving, but will fail if
                 % both paws have similar motion.
-                [~,Iaux2] = readMouseImage(vid,i_images-1,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
+                
+                
+                % CODE TESTING [DE]
+                %[~,Iaux2] = readMouseImage(vid,i_images-1,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
+                contrast_template = 'C:\Users\Dennis\Documents\DATA_DarkvsLight_Overground\Contrast_Template.mat';
+                [~,Iaux2] = readMouseImage( ...
+                    vid,...
+                    i_images-1,...
+                    Bkg,...
+                    data.flip,...
+                    scale,...
+                    ind_warp_mapping,...
+                    expected_im_size,...
+                    'contrast_template',...
+                    contrast_template);
+                % -----------------------------------------------------------------------------------------------
+
+                
+                
                 I_vel = double(Iaux) - double(Iaux2);
                 moving = I_vel > 25; %%% FIXME: This clearly depends on image size. Must be normalized in some way.
                 D21_mov = reshape(getWindowFromImage(moving,D2{1}',round(box_size_point{1})/2),[],size(D2{1},1));
@@ -585,9 +638,9 @@ end
 
 disp(['flip: ' num2str(data.flip)])
 if data.flip
-    % Vertical flip of tracks:
-    final_tracks(1,:,:) = vid.Width - final_tracks(1,:,:) + 1;
-    tracks_tail(1,:,:) = vid.Width - tracks_tail(1,:,:) + 1;
+    % Vertical flip of tracks: 
+    final_tracks(1,:,:) = size(data.ind_warp_mapping,2) - final_tracks(1,:,:) + 1;
+    tracks_tail(1,:,:) = size(data.ind_warp_mapping,2) - tracks_tail(1,:,:) + 1;
     final_tracks = final_tracks(:,[3 4 1 2 5],:);
 end
 
