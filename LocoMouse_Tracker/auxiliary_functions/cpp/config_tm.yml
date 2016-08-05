@@ -27,6 +27,6 @@ tail_sub_bounding_box: 0.6 #The percentage counting from the left of the box whe
 alpha_vel: 0.1 #Relative term for the velocity costs on the match2nd tracking algorithm.
 alpha_vel_top: 100 #Same as above, for the top
 pairwise_occluded_cost: 0.01 #Cost for moving to and between occluded points on the match2nd algorithm.
-moving_average_window: 5 #Must be odd.
+moving_average_window: 15 #Must be odd.
 use_reference_image: true #Make true or false to switch on and off
-reference_image_path: 'I_ref_bottom.png' #If it can't be read the program will crash.
+reference_image_path: 'I_ref_bottom.png' #If it can't be read the program will halt.
