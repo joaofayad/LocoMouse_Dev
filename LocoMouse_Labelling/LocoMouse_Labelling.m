@@ -472,7 +472,7 @@ function axes_frame_ButtonDownFcn(hObject,eventdata,handles)
 
     % If showing corrected images, p needs to be warped back to original:
     if handles.radiobutton_corrected == get(handles.uipanel_distortion,'SelectedObject')
-        p = warpPointCoordinates(p,userdata(video_id).data.inv_ind_warp_mapping   ,size(userdata(video_id).data.ind_warp_mapping));
+        p = warpPointCoordinates(p,userdata.data(video_id).inv_ind_warp_mapping   ,size(userdata.data(video_id).ind_warp_mapping));
     end
 
     userdata.data(video_id).tracks{lind(1)}{lind(2)}{lind(3)}(:,lind(4),userdata.data(video_id).current_frame,view) = p';

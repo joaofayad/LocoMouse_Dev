@@ -74,16 +74,16 @@ data.split_line = split_line; % in older versions called mirror_line;
 %% 6) Displaying results:
 % Results are displayed by calling LocoMouse_DisplayTracks GUI with the
 % following inputs:
-f_l = 'b1_21_133_2_tied_0.225_0.225__36';
-f_s = 'b1bg';
-T = load(['C:\Users\Dennis\Documents\LocoMouse_testing\PRES_DATA\',f_l,'.mat']);
+f_l = 'B6C1_66_0_1_AmbLight_S1T1_0';
+f_s = 'B6C1_66_0_1_AmbLight_S1T';
+T = load(['C:\Users\Dennis\Documents\DATA_DarkvsLight_Overground\LM_output\data\',f_l,'.mat']);
 % T = load(['C:\Users\Dennis\Documents\LocoMouse_testing\data\',f_l,'.mat']);
-T.data.vid = ['C:\Users\Dennis\Documents\LocoMouse_testing\',f_l,'.avi'];
-T.data.bkg = ['C:\Users\Dennis\Documents\LocoMouse_testing\',f_s,'.png'];
+T.data.vid = ['C:\Users\Dennis\Documents\DATA_DarkvsLight_Overground\2015_11_10_S1_S2\',f_l,'.avi'];
+T.data.bkg = ['C:\Users\Dennis\Documents\DATA_DarkvsLight_Overground\2015_11_10_S1_S2\',f_s,'.png'];
 LocoMouse_DisplayTracks({T.data,T.final_tracks,T.tracks_tail,{T.OcclusionGrid,T.bounding_box}});
 
-% model=load('C:\Users\Dennis\Documents\GitHub\LocoMouse_Dev\LocoMouse_Tracker\model_files\model_01112013_fields.mat');
-% T.model = model; clear model
+model=load('C:\Users\Dennis\Documents\GitHub\LocoMouse_Dev\LocoMouse_Tracker\model_files\model_01112013_fields.mat');
+T.model = model; clear model
 
 %% 7) Debugging the tracking algorithm:
 % Finally, one can check the result of filtering the image with the

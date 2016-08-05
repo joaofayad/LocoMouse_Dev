@@ -2,6 +2,9 @@ function [tracks_unconstrained,tracks_tail_unconstrained] = convertTracksToUncon
 % CONVERTTRACKSTOUNCONSTRAINEDVIEW Transforms the tracks from the
 % constrained to unconstrained view format.
 
+% Smoothed data can't be tranformed with this function.
+final_tracks = round(final_tracks);
+tracks_tail = round(tracks_tail);
 
 if scale ~= 1
     % Scaling the tracks:
@@ -28,7 +31,17 @@ tracks_unconstrained = reshape([j;i],4,Ntracks,Nframes);
 
 Ntracks = size(tracks_tail,2);
 if Ntracks > 0
-    tracks_tail = reshape(tracks_tail([1 2 1 3],:,:),2,[]);
+    try
+        if size(tracks_tail,1) == 4
+            disp('WHY is size(tracks_tail,1) == 4 ??')
+            tracks_tail = reshape(tracks_tail([1 2 3 4],:,:),2,[]);
+        elseif size(tracks_tail,1) == 3
+            tracks_tail = reshape(tracks_tail([1 2 1 3],:,:),2,[]);
+        end
+    catch tError
+        disp('moep')
+    end
+        
     ind = sub2ind(image_size,tracks_tail(2,:),tracks_tail(1,:));
     i = NaN(1,length(ind));
     j = NaN(1,length(ind));

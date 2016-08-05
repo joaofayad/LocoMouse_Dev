@@ -490,7 +490,7 @@ if cpp
     model = handles.model;
     parfor i_files = 1:Nfiles
         file_name = char(strtrim(file_list{i_files}));
-        successful_tracking(i_files) = track_MATLB_CPP(data, model,model_file, calibration_file, root_path, file_name, output_fun, output_path, bkg_fun, overwrite_results, export_figures,[], cpp, cpp_config_file);
+        successful_tracking(i_files) = track_MATLB_CPP(handles.data, model,model_file, calibration_file, root_path, file_name, output_fun, output_path, bkg_fun, overwrite_results, export_figures,[], cpp, cpp_config_file);
     end
 else
     % MATLAB code:
@@ -507,7 +507,6 @@ set(handles.disable_with_start,'Enable','on');
 set(handles.enable_with_start,'Enable','off');
                                                                                                     
 function successful_tracking = track_MATLB_CPP(data, model,model_file, calibration_file, root_path, file_name,output_fun, output_path, bkg_fun, checkbox_overwrite_results,export_figures,bounding_box_choice,cpp,cpp_config_file)
-current_file_time = tic;
 try
     successful_tracking = true;
     % Going over the file list:
@@ -537,9 +536,10 @@ try
         end
         
         % Attempting to track:
-        fprintf('Tracking %s ...\n',file_name)
-        data.bkg = bkg_file;
-        data.vid = file_name;
+            current_file_time = tic;
+            fprintf('Tracking %s ...\n',file_name)
+            data.bkg = bkg_file;
+            data.vid = file_name;
                
         if cpp
             if ispc
@@ -549,10 +549,10 @@ try
             else
                 error('Only windows is supported so far. Compile the C++ code in the current platform and insert the call here.');
             end
-            
-        else
+         else
             [final_tracks_c,tracks_tail_c,OcclusionGrid,bounding_box,data,debug] = MTF_rawdata(data, model, bounding_box_choice);
         end
+       
         [final_tracks,tracks_tail] = convertTracksToUnconstrainedView(final_tracks_c,tracks_tail_c,size(data.ind_warp_mapping),data.ind_warp_mapping,data.flip,data.scale);
         % clearing the background image to avoid problems:
         
