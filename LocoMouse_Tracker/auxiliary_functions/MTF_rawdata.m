@@ -236,7 +236,7 @@ WS=load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'WeightSetting
 tweight =  WS.WeightSettings{bb_choice};
 % Looping over all the images
 % warning('for changed to FOR for debugging reasons. [DE]')
-parfor i_images = 1:N_frames
+for i_images = 1:N_frames
 %     warning('function breaking debugging edit. [DE]')
 %     i_images=ceil(N_frames/2);
    %% Reading images from video and preprocessing data:

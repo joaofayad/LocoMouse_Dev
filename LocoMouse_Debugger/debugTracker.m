@@ -445,19 +445,19 @@ if handles.N_ong_tracks > 0 && get(handles.checkbox_ong,'Value') == 1
     if get(handles.uipanel_image_type,'SelectedObject') == handles.radiobutton_original_image
         pos(:,[2 1]) = warpPointCoordinates(pos(:,[2 1]), ...
             handles.data.ind_warp_mapping, ...
-            size(handles.data.ind_warp_mapping));
+            size(handles.data.ind_warp_mapping),handles.flip);
         % The tracks are defined on the original images but handles.ong_vec
         % is defined on the corrected images. To correctly plot
         % handles.ong_vec we must always warp one of the coordinates...
         pos_z_x = warpPointCoordinates(handles.final_tracks([2 1],current_track,userdata.current_frame)',...
             handles.data.inv_ind_warp_mapping, ...
-            size(handles.data.inv_ind_warp_mapping));
+            size(handles.data.inv_ind_warp_mapping),handles.flip);
         % The vertical coordinate is garbage:
         pos_z = [handles.ong_vec' repmat(pos_z_x(2),handles.N_ong_vec_tracks,1)]; clear pos_z_x
         % Warping to the original image:
         pos_z(:,[2 1]) = warpPointCoordinates(pos_z, ...
             handles.data.ind_warp_mapping, ...
-            size(handles.data.ind_warp_mapping));
+            size(handles.data.ind_warp_mapping),handles.flip);
     else
         % As defined during the tracker...
         pos_z = [repmat(get(handles.plot_handles(1,current_track),'Xdata'),1,handles.N_ong_vec_tracks);handles.ong_vec]';
@@ -488,7 +488,7 @@ if( get(handles.checkbox_bounding_box,'Value'))
     if get(handles.uipanel_image_type,'SelectedObject') == handles.radiobutton_original_image
         corners(:,[2 1]) = warpPointCoordinates(corners(:,[2 1]), ...
             handles.data.ind_warp_mapping, ...set(handles.plot_handles_bounding_box, {'Xdata','Ydata'}, boxlines);
-            size(handles.data.ind_warp_mapping));
+            size(handles.data.ind_warp_mapping),handles.flip);
     end
     
     % Turning corners into lines:
@@ -633,6 +633,11 @@ end
 % markers:
 function updatePositionMarker(handles,current_track,current_frame)
 % Bottom view:
+% if handles.flip
+%     track_map = [3 4 1 2 5];
+%     current_track = track_map(current_track);
+% end
+
 pos = handles.final_tracks(:,current_track,current_frame);
 
 % Warp the points if needed:
@@ -640,7 +645,7 @@ if get(handles.uipanel_image_type,'SelectedObject') == handles.radiobutton_disto
     Xin = [pos(2) pos(1);pos(4) pos(3)];
     pos = warpPointCoordinates(Xin, ...
         handles.data.inv_ind_warp_mapping, ...
-        size(handles.data.inv_ind_warp_mapping));
+        size(handles.data.inv_ind_warp_mapping),handles.flip);
     pos = [pos(1,2);pos(1,1);pos(2,2);pos(2,1)];
 end
 pos = pos';
@@ -677,6 +682,13 @@ set(handles.plot_handles(2,current_track),{'XData','Ydata'},num2cell(pos(3:4)));
 
 % --- Updates the location of candidates:
 function updatePositionCandidates(handles,current_track,current_frame)
+
+% if handles.flip
+%     track_map = [3 4 1 2 5];
+%     current_track = track_map(current_track);
+% end
+
+
 % Checking the current_point
 if current_track > 4
     current_point = 2;
@@ -686,12 +698,13 @@ end
 
 % Update location of current candidates:
 set(handles.plot_handles_candidates(1,1:handles.N_candidates(current_point,current_frame)),'Visible','on');
+
 pos = handles.candidate_locations_bottom{current_point,current_frame}(1:2,:)';
 % Warping if needed:
 if get(handles.uipanel_image_type,'SelectedObject') == handles.radiobutton_original_image
     pos(:,[2 1]) = warpPointCoordinates(pos(:,[2 1]), ...
         handles.data.ind_warp_mapping, ...
-        size(handles.data.ind_warp_mapping));
+        size(handles.data.ind_warp_mapping),handles.flip);
 end
 pos = num2cell(pos);
 set(handles.plot_handles_candidates(1,1:handles.N_candidates(current_point,current_frame)),{'Xdata','Ydata'},pos);
@@ -705,7 +718,7 @@ if N_candidates_z > 0
     if get(handles.uipanel_image_type,'SelectedObject') == handles.radiobutton_original_image
         pos_z(:,[2 1]) = warpPointCoordinates(pos_z(:,[2 1]), ...
             handles.data.ind_warp_mapping, ...
-            size(handles.data.ind_warp_mapping));
+            size(handles.data.ind_warp_mapping),handles.flip);
         
     end
     pos_z = num2cell(pos_z);
@@ -807,6 +820,11 @@ function updateTrajectory(handles,current_track,current_frame)
 % Setting all transitions to invisible. The right ones will be set to
 % visible afterwards.
 
+% if handles.flip
+%     track_map = [3 4 1 2 5];
+%     current_track = track_map(current_track);
+% end
+
 % Check when to plot the transitions:
 if current_frame > 1
     frame_vec = [current_frame-1 current_frame];
@@ -818,7 +836,7 @@ if current_frame > 1
         Xin = [pos(1,2) pos(1,1);pos(1,4) pos(1,3);pos(2,2) pos(2,1);pos(2,4) pos(2,3)];
         pos = warpPointCoordinates(Xin, ...
             handles.data.inv_ind_warp_mapping, ...
-            size(handles.data.inv_ind_warp_mapping));
+            size(handles.data.inv_ind_warp_mapping),handles.flip);
 %         pos = [pos(1,2);pos(1,1);pos(2,2);pos(2,1)];
         pos = [pos(1,2) pos(3,2);pos(1,1) pos(3,1);pos(2,2) pos(4,2);pos(2,1) pos(4,1)];
         pos = pos';
@@ -883,7 +901,7 @@ if current_frame > 1
     if get(handles.uipanel_image_type,'SelectedObject') == handles.radiobutton_original_image
         CL(:,[2 1]) = warpPointCoordinates(CL(:,[2 1]), ...
             handles.data.ind_warp_mapping, ...
-            size(handles.data.ind_warp_mapping));
+            size(handles.data.ind_warp_mapping),handles.flip);
     end
     
     P = repmat(pos(1,1:2)',1,handles.N_candidates(current_point,current_frame))';
@@ -907,7 +925,7 @@ if current_frame > 1
     if get(handles.uipanel_image_type,'SelectedObject') == handles.radiobutton_original_image
         ONG(:,[2 1]) = warpPointCoordinates(ONG(:,[2 1]), ...
             handles.data.ind_warp_mapping, ...
-            size(handles.data.ind_warp_mapping));
+            size(handles.data.ind_warp_mapping),handles.flip);
     end
     
     set(handles.plot_handles_transition_tofrom_ong(1:n_ong_point),{'XData','YData'},mat2cell([P(:,1) ONG(:,1) P(:,2) ONG(:,2)],ones(1,n_ong_point),2*ones(1,2)));
@@ -965,6 +983,7 @@ function popupmenu_candidates_top_Callback(hObject, eventdata, handles)
 current_candidate = get(hObject,'Value');
 current_frame = str2num(get(handles.edit_frames,'String'));
 current_track = get(handles.popupmenu_tracks,'Value');
+
 if current_track > 4
     current_point = 2;
 else
@@ -1156,3 +1175,5 @@ function uipanel_candidate_options_SelectionChangeFcn(hObject, eventdata, handle
 if strcmpi(handles.timer.Running,'off')
 displayImage([],[],handles);
 end
+
+

@@ -1,4 +1,4 @@
-function [D2_nms, scores,kp] = nmsMax(D2_coordinates,box_size, scores, coordinates, overlap)
+function [D2_nms, scores,kp,reg_split] = nmsMax(D2_coordinates,box_size, scores, coordinates, overlap)
 % NMSMAX_VOL performs non-maxima suppresion in a volume using the Pascal
 % criterium of intersection_area/union_area > overlap -> suppression.
 %
@@ -55,8 +55,15 @@ end
 
 DD2_coordinates_e = DD2_coordinates_s + box_size;
 clear box_size
-
+reg_split = {};
 for i=1:n
+    if kp(i) && (i > 1)
+        reg_split = cat(2,reg_split,{find(kp_split)});
+        kp_split = false(1,n);
+        kp_split(i) = true;
+    end
+    
+    
     for j=(i+1):n
         if ~kp(j)
             continue;
@@ -72,8 +79,10 @@ for i=1:n
         
         if(decision > overlap)
             kp(j) = false;
+            kp_split(j) = true;
         end
     end
+    
 end
 D2_nms = D2_coordinates(kp,:);
 scores = scores(kp);

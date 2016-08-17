@@ -1,4 +1,4 @@
-function Xout = warpPointCoordinates(Xin, ind_warp_mapping, im_size)
+function Xout = warpPointCoordinates(Xin, ind_warp_mapping, im_size, flip)
 % warpPointCoordinates Give a set of image coordinates, warps them to
 % another image according to ind_warp_mapping.
 % 
@@ -25,3 +25,7 @@ catch tError
 end
 Xout = NaN(size(Xin));
 [Xout(valid,1),Xout(valid,2)] = ind2sub(im_size, warp_ind);
+
+if flip
+    Xout(:,2) = im_size(2) - Xout(:,2) + 1;
+end
