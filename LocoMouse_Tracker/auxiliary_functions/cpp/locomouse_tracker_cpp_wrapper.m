@@ -1,4 +1,4 @@
-function [final_tracks_c, tracks_tail_c,OcclusionGrid,bounding_box,data,debug] = locomouse_tracker_cpp_wrapper(data,root_path, model, calib, flip, model_file, calibration_file, cpp_exec, config_file)
+function [final_tracks_c, tracks_tail_c,data,debug] = locomouse_tracker_cpp_wrapper(data,root_path, model, calib, flip, model_file, calibration_file, cpp_exec, config_file)
 % Reads the inputs in the MATLAB format for LocoMouse_Tracker and parses
 % them to be used for the C++ code.
 [~,model_file_name,~] = fileparts(model_file);
@@ -37,8 +37,7 @@ final_tracks_c = permute(cat(3,output.paw_tracks0,output.paw_tracks1,output.paw_
 final_tracks_c(final_tracks_c(:)<0) = NaN;
 final_tracks_c = final_tracks_c + 1;
 tracks_tail_c = NaN(3,1,size(final_tracks_c,3));
-OcclusionGrid = [];
-bounding_box = [];
+% FIXME: Make CPP code output the debug structures as well.
 %data = []; Need to adapt the export function to output all the relevant
 %parameters.
 debug = [];

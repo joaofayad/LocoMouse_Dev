@@ -1,4 +1,4 @@
-function [final_tracks,tracks_tail,OcclusionGrid,bounding_box,data,debug] = MTF_rawdata(data, model,bb_choice)
+function [final_tracks,tracks_tail,data,debug] = MTF_rawdata(data, model,bb_choice)
 % MTF   Tracks a set of predefined (mouse) features over a given video.
 %
 % INPUT:
@@ -198,8 +198,8 @@ bounding_box_dim = round(nanmin(nanmean(bounding_box(2,:,:),3) + 3 * nanstd(boun
 Nsamples = 5; 
 coeff = ones(1, Nsamples)/Nsamples;
 bounding_box = round(squeeze(bounding_box(1,:,:)));
-debug.bounding_box = bounding_box;
-debug.bounding_box_dim = bounding_box_dim;
+% debug.bounding_box = bounding_box;
+% debug.bounding_box_dim = bounding_box_dim;
 temp = bounding_box;
 temp = filter(coeff, 1,temp' ,[],1)';
 bounding_box(:,:,Nsamples+1:end-Nsamples) = round(temp(:,:,Nsamples+1:end-Nsamples));clear temp N_samples coeff
@@ -635,16 +635,19 @@ for i_tracks = 1:N_pointlike_tracks
     M_top(i_tracks,:) = Mpf_top;
 end
 
-
-disp(['flip: ' num2str(data.flip)])
-if data.flip
-    % Vertical flip of tracks: 
-    final_tracks(1,:,:) = size(data.ind_warp_mapping,2) - final_tracks(1,:,:) + 1;
-    tracks_tail(1,:,:) = size(data.ind_warp_mapping,2) - tracks_tail(1,:,:) + 1;
-    final_tracks = final_tracks(:,[3 4 1 2 5],:);
-end
+% The output of this tracker should either be the "internal" tracks of the
+% algorithm i.e. always from left to right, or the fully corrected tracks
+% i.e. that match the input video. Vertically flipped internal tracks are
+% not a meaningful representation. 
+%
+% Code that flipped the tracks moved to the
+% convertTracksToUnconstrainedView function. [joaofayad]
 
 % Debug data:
+debug.bounding_box = bounding_box;
+debug.bounding_box_dim = bounding_box_dim;
+debug.Occlusion_Grid_Bottom = OcclusionGrid;
+debug.Occlusion_Vect_Top = nong_vect;
 debug.tracks_bottom = tracks_bottom;
 debug.M = M;
 debug.tracks_top = tracks_top;

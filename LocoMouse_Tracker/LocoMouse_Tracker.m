@@ -545,19 +545,18 @@ try
             if ispc
                 cpp_exect = fullfile(root_path,'auxiliary_functions','cpp','Locomouse.exe');
                 calib = rmfield(data,{'vid','bkg','flip'});
-                [final_tracks_c, tracks_tail_c,OcclusionGrid,bounding_box,data,debug] = locomouse_tracker_cpp_wrapper(data,root_path,model, calib, data.flip, model_file, calibration_file, cpp_exect, cpp_config_file);
+                [final_tracks_c, tracks_tail_c,data,debug] = locomouse_tracker_cpp_wrapper(data,root_path,model, calib, data.flip, model_file, calibration_file, cpp_exect, cpp_config_file);
             else
                 error('Only windows is supported so far. Compile the C++ code in the current platform and insert the call here.');
             end
          else
-            [final_tracks_c,tracks_tail_c,OcclusionGrid,bounding_box,data,debug] = MTF_rawdata(data, model, bounding_box_choice);
+            [final_tracks_c,tracks_tail_c,data,debug] = MTF_rawdata(data, model, bounding_box_choice);
         end
        
         [final_tracks,tracks_tail] = convertTracksToUnconstrainedView(final_tracks_c,tracks_tail_c,size(data.ind_warp_mapping),data.ind_warp_mapping,data.flip,data.scale);
-        % clearing the background image to avoid problems:
         
         % Saving tracking data:
-        save(data_file_name,'final_tracks','tracks_tail','final_tracks_c','tracks_tail_c','OcclusionGrid','bounding_box','debug','data');
+        save(data_file_name,'final_tracks','tracks_tail','final_tracks_c','tracks_tail_c','debug','data');
         
         % Saving data plot figures
         if export_figures
@@ -689,7 +688,7 @@ end
 
 
 % --- Function that loads a calibration file and performs a few basic checks:
-function handles = loadCalibrationFile(full_file_path, handles)
+function handles = loadCalibrationFile(full_file_path,handles)
 try
     data = load(full_file_path);
     % Since there is no model file type we must check we have all the right
@@ -697,13 +696,13 @@ try
     name_fields = {'ind_warp_mapping','inv_ind_warp_mapping','mirror_line','split_line'};
     
     tfields = fieldnames(data);
-    
+    tfoundfield = false(1,size(name_fields,2));
     for i_f = 1:size(name_fields,2)
         tfoundfield(i_f) =any(ismember(name_fields(i_f),tfields));
     end
     allfields = all(tfoundfield([1,2])) && any(tfoundfield([3 4]));
     if ~allfields
-        fprintf('ERROR: Incomplete model file.')
+        error('ERROR: Incomplete calibration file.')
     else
         if tfoundfield(3) && ~tfoundfield(4)
             data.split_line = data.mirror_line;
@@ -714,11 +713,11 @@ try
             data.scale = 1;
         end
         handles.data = data;
-        clear data;
     end
     
 catch load_error
-    fprintf('Error: Could not load %s with MATLAB.\nError Message:%s\n',full_file_path,load_error.message);
+    fprintf('Error: Could not load %s with MATLAB.\n',full_file_path);
+    disp(getReport(load_error.message,'extended'));
     beep;
 end
 % Setting the old or new string according to how the computations went:

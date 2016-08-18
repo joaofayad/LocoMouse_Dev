@@ -3225,13 +3225,13 @@ function [userdata] = plotBoxImage_proper(userdata, video_id, lind,  warp, i_vie
     % if we don't have coordinates in this view but in the other, 
     % we want to suggest an x value based on the other view
     if any(isnan(track_k)) && ~any(isnan(track_ko))
-        track_ko = warpPointCoordinates(track_ko([2 1])',userdata.data(video_id).inv_ind_warp_mapping,size(userdata.data(video_id).inv_ind_warp_mapping));
+        track_ko = warpPointCoordinates(track_ko([2 1])',userdata.data(video_id).inv_ind_warp_mapping,size(userdata.data(video_id).inv_ind_warp_mapping),flip);
         if i_view == 1
             track_ko(1) = track_ko(1) + userdata.data(video_id).split_line;
         else
             track_ko(1) = track_ko(1) - userdata.data(video_id).split_line;
         end
-        track_ko = warpPointCoordinates(track_ko,userdata.data(video_id).ind_warp_mapping,size(userdata.data(video_id).ind_warp_mapping));
+        track_ko = warpPointCoordinates(track_ko,userdata.data(video_id).ind_warp_mapping,size(userdata.data(video_id).ind_warp_mapping),flip);
         track_k(1)=track_ko(2);
     end   
     
@@ -3245,7 +3245,7 @@ function [userdata] = plotBoxImage_proper(userdata, video_id, lind,  warp, i_vie
             y = track_k(2);
         end
         % track_w = warpPointCoordinates([y x],userdata.data(video_id).inv_ind_warp_mapping,size(userdata.data(video_id).inv_ind_warp_mapping));
-        track_w = warpPointCoordinates([y x],userdata.data(video_id).ind_warp_mapping,size(userdata.data(video_id).inv_ind_warp_mapping));
+        track_w = warpPointCoordinates([y x],userdata.data(video_id).ind_warp_mapping,size(userdata.data(video_id).inv_ind_warp_mapping),flip);
         if isnan(track_k(2))
             track_k = [track_w(2) NaN];
         else
@@ -3350,6 +3350,9 @@ function updatePosition(handles)
     
     vis = userdata.data(video_id).visibility{lind(1)}...
         {lind(2)}{lind(3)}(lind(4),userdata.data(video_id).current_frame,:);
+    
+    flip = userdata.data(video_id).flip;
+
     % Check if the image is original or distorted:
 
     if get(handles.uipanel_distortion,'SelectedObject') == handles.radiobutton_corrected
@@ -3357,7 +3360,7 @@ function updatePosition(handles)
         if userdata.data(video_id).flip
             pos(1,:,:,:) = userdata.data(video_id).vid.Width - pos(1,:,:,:);
         end
-        track_k = warpPointCoordinates(cat(2,pos([2 1],:,:,1),pos([2 1],:,:,2))',userdata.data(video_id).inv_ind_warp_mapping,size(userdata.data(video_id).inv_ind_warp_mapping));
+        track_k = warpPointCoordinates(cat(2,pos([2 1],:,:,1),pos([2 1],:,:,2))',userdata.data(video_id).inv_ind_warp_mapping,size(userdata.data(video_id).inv_ind_warp_mapping),flip);
         pos = cat(4,track_k(1,[2 1])',track_k(2,[2 1])');
         if userdata.data(video_id).flip
             pos(1,:,:,:) = userdata.data(video_id).vid.Width - pos(1,:,:,:);

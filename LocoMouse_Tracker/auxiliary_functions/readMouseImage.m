@@ -95,7 +95,7 @@ for tSV = 1:size(setVars,2)
                     if strcmp(tcte,'.mat')
                         if exist(contrast_template,'file')==2
                             try
-                                load([contrast_template],'TEMPLATE')
+                                load(contrast_template,'TEMPLATE')
                             catch tError
                                 warning('readMouseImage: contrast_template does not contain TEMPLATE.')
                             end
@@ -107,7 +107,9 @@ for tSV = 1:size(setVars,2)
                                 end
                             end
                         else
-                            warning('readMouseImage: contrast_template does not exist.')
+                            % FIXME: There should be no problem for the
+                            % template to not exist. [joaofayad]
+                            %warning('readMouseImage: contrast_template does not exist.')
                         end
                     else
                         warning('readMouseImage: contrast_template must be a .mat file.')
