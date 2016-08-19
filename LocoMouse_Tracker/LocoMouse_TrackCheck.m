@@ -68,14 +68,17 @@ function LocoMouse_TrackCheck_OpeningFcn(hObject, ~, handles, varargin)
     % This code relies on imread and VideoReader.
     % Builing the lists to use when browsing for files:
     sup_im_files = imformats;
-    extensions = {};
-    descriptions = {};
+    extensions = [sup_im_files(:).ext];
+    descriptions = cell(1,length(extensions));
+    i_desc = 1;
     for i_temp = 1:length(sup_im_files)
-        extensions = [extensions sup_im_files(i_temp).ext];
         for i_d = 1:length(sup_im_files(i_temp).ext)
-            descriptions = [descriptions sup_im_files(i_temp).description];
+            descriptions{i_desc} = sup_im_files(i_temp).description;
+            i_desc = i_desc+1;
         end
     end
+    clear i_desc;
+    
     handles.N_supported_im_files = length(extensions)+1;
     handles.supported_im_files = cell(handles.N_supported_im_files,2);
     handles.supported_im_files(2:end,1) = cellfun(@(x)(['*.',x]),extensions,'un',false)';
@@ -2731,7 +2734,7 @@ function listbox_files_Callback(hObject, eventdata, handles)
                     x_idx(t_fi,:) = x_idx(t_fi,:) - max(x_idx(t_fi,:)) + userdata.data(video_id).vid.Width;
                 end
             end
-            userdata.data(video_id).LimitedWindow_X = x_idx;
+            userdata.data(video_id).LimitedWindow_X = inpaint_nans(x_idx);
             userdata.data(video_id).UseLimitedWindow = true;
             set(handles.checkbox_LimitWindow,'Value',true);
             set(handles.figure1,'UserData',userdata);

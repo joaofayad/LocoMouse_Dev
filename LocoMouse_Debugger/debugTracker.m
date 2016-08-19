@@ -153,12 +153,12 @@ handles.plot_handles_transition_tofrom_ong = line(ones(2,handles.N_candidates_ma
 
 % Bounding box: 
 % Changed to 4 lines as the box on the original view is not a rectangle.
-% handles.plot_handles_bounding_box = rectangle('Position', ones(1,4),'EdgeColor','y');
-
 handles.plot_handles_bounding_box = zeros(1,4);
 for i_box = 1:4
     handles.plot_handles_bounding_box(i_box) = line(0,0,'Color','y','Marker','*');
 end
+% BR BL TR TL
+handles.bounding_box_corners = [1 1;-handles.bounding_box_dim(1) 1;1 -handles.bounding_box_dim(2);-handles.bounding_box_dim(1) -handles.bounding_box_dim(2)]-1;
 
 % Initializing the track list:
 set(handles.popupmenu_tracks,'String',char({'FR Paw';'HR Paw';'FL Paw';'HL Paw';'Snout'}));
@@ -487,7 +487,7 @@ if handles.N_ong_tracks > 0 && get(handles.checkbox_ong,'Value') == 1
             handles.original_im_size,handles.data.flip);
     else
         % As defined during the tracker...
-        pos_z = [repmat(get(handles.plot_handles(1,current_track),'Xdata'),1,handles.N_ong_vec_tracks);handles.Occlusion_Vect_Top]';
+        pos_z = [repmat(get(handles.plot_handles(2,current_track),'Xdata'),1,handles.N_ong_vec_tracks);handles.Occlusion_Vect_Top]';
     end
     
     set(handles.plot_handles_ong(1,:),{'XData','YData'},num2cell(pos));
@@ -503,16 +503,17 @@ end
 % Draw bounding box
 if( get(handles.checkbox_bounding_box,'Value'))
 
-    corners = zeros(4,2);% BR BL TR TL
-    
-    % FIXME: predefine the box and just perform the subtraction on x and y
-    % afterwards.
-    corners(1,:) = [handles.bounding_box(1,userdata.current_frame) handles.bounding_box_dim(2)];
-    corners(2,:) = [handles.bounding_box(1,userdata.current_frame)-handles.bounding_box_dim(1) handles.bounding_box_dim(2)];
-    corners(3,:) = [handles.bounding_box(1,userdata.current_frame) handles.bounding_box_dim(2)-handles.bounding_box_dim(2)];
-    corners(4,:) = [handles.bounding_box(1,userdata.current_frame)-handles.bounding_box_dim(1) handles.bounding_box_dim(2)-handles.bounding_box_dim(2)];
-    corners(:,2) = corners(:,2) + handles.data.split_line; 
-    
+%     corners = zeros(4,2);
+%     
+%     % FIXME: predefine the box and just perform the subtraction on x and y
+%     % afterwards.
+%     corners(1,:) = [handles.bounding_box(1,userdata.current_frame) handles.bounding_box_dim(2)];
+%     corners(2,:) = [handles.bounding_box(1,userdata.current_frame)-handles.bounding_box_dim(1) handles.bounding_box_dim(2)];
+%     corners(3,:) = [handles.bounding_box(1,userdata.current_frame) handles.bounding_box_dim(2)-handles.bounding_box_dim(2)];
+%     corners(4,:) = [handles.bounding_box(1,userdata.current_frame)-handles.bounding_box_dim(1) handles.bounding_box_dim(2)-handles.bounding_box_dim(2)];
+     
+    corners = bsxfun(@plus,handles.bounding_box_corners,handles.bounding_box(1:2,userdata.current_frame)');
+    corners(:,2) = corners(:,2) + handles.data.split_line;
     % Check for need to warp: Box is defined on the corrected image.
     if get(handles.uipanel_image_type,'SelectedObject') == handles.radiobutton_original_image
         corners(:,[2 1]) = warpPointCoordinates(corners(:,[2 1]), ...
@@ -702,22 +703,24 @@ else
 end
 
 % Updating the plot handle, checking if it is occluded:
-if any(isnan(pos(1:2)))
-    pos(1:2) = (handles.Occlusion_Grid_Bottom(:,handles.M(current_track,current_frame)-size(handles.tracks_bottom{current_point,current_frame},2))+handles.bounding_box(1:2,current_frame))';
+if any(isnan(pos(1:2,1)))
+    pos(1:2,1) = (handles.bounding_box(1:2,current_frame) - handles.Occlusion_Grid_Bottom(:,handles.M(current_track,current_frame)-size(handles.tracks_bottom{current_point,current_frame},2)))';
+%     pos(2,1) = pos(2,1) + handles.data.split_line;
     set(handles.plot_handles(1,current_track),'MarkerFaceColor','none')
 else
     set(handles.plot_handles(1,current_track),'MarkerFaceColor',handles.c(current_track,:));
 end
-set(handles.plot_handles(1,current_track),{'XData','YData'},num2cell(pos(1:2)));
+set(handles.plot_handles(1,current_track),{'XData','YData'},num2cell(pos(1:2,1)'));
 
 % Side View:
-if isnan(pos(4))
-    pos(3) = pos(1);
+if isnan(pos(2,2))
+    pos(1,2) = pos(1,1);
     Zpos = handles.M_top(current_track,current_frame)-size(handles.tracks_top{current_track,current_frame},2);
     if Zpos > 0
-        pos(4) = handles.Occlusion_Vect_Top(Zpos);
+        pos(2,2) = handles.Occlusion_Vect_Top(Zpos);
     else
-        pos(4) = NaN;
+        % FIXME: When does this happen?
+        pos(2,2) = NaN;
     end
     set(handles.plot_handles(2,current_track),'MarkerFaceColor','none');
 else

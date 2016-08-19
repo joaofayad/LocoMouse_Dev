@@ -68,7 +68,7 @@ else
 end
 
 N_frames = floor(vid.Duration * vid.FrameRate);
-% N_frames =10;
+% N_frames = 10;
 % warning('frame number was set to 10 for debugging reasons! - DE')
 
 N_views = 2; % FIXME: Should come from the code...
@@ -159,15 +159,15 @@ load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'ComputeMouseBox_
 disp(['Using bounding box option "',char(ComputeMouseBox_option(bb_choice)),'"']); 
 tcmd_string = strtrim(char(ComputeMouseBox_cmd_string(bb_choice)));
 disp(['(',tcmd_string,')']);
+flip = data.flip;
 parfor i_images = 1:N_frames
-    
     % CODE TESTING [DE]
     contrast_template = 'C:\Users\Dennis\Documents\DATA_DarkvsLight_Overground\Contrast_Template.mat';
     [I,Iaux] = readMouseImage( ...
         vid,...
         i_images,...
         Bkg,...
-        data.flip,...
+        flip,...
         scale,...
         ind_warp_mapping,...
         expected_im_size,...
@@ -236,7 +236,7 @@ WS=load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'WeightSetting
 tweight =  WS.WeightSettings{bb_choice};
 % Looping over all the images
 % warning('for changed to FOR for debugging reasons. [DE]')
-for i_images = 1:N_frames
+parfor i_images = 1:N_frames
 %     warning('function breaking debugging edit. [DE]')
 %     i_images=ceil(N_frames/2);
    %% Reading images from video and preprocessing data:
@@ -275,8 +275,6 @@ for i_images = 1:N_frames
         end
     end
     
-
-
     %% Detecting line features (e.g. tail):
     % Line features are detected independently from the other features
     % (e.g. point features). While not optimal, each feature type follows a
