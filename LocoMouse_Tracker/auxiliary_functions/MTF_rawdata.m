@@ -67,8 +67,8 @@ else
     Bkg = data.bkg;
 end
 
-N_frames = floor(vid.Duration * vid.FrameRate);
-% N_frames = 10;
+% N_frames = floor(vid.Duration * vid.FrameRate);
+N_frames = 500;
 % warning('frame number was set to 10 for debugging reasons! - DE')
 
 N_views = 2; % FIXME: Should come from the code...
@@ -349,11 +349,11 @@ parfor i_images = 1:N_frames
                 [i{i_views}, j{i_views}] = ind2sub(size(I_cell{i_views}),ind_temp(detections)');
                 if i_views  == 1
                     % Apply non-maxima suppresion to detected areas:
-                    [D2{i_views}, scores{i_views}] = nmsMax_mexed([i{i_views} j{i_views}],box_size_point{i_views}, scores{i_views}','center'); % use pre-compiled version
-                    %[D2{i_views}, scores{i_views}] = nmsMax([i{i_views} j{i_views}],box_size_point{i_views}, scores{i_views}','center');
+%                     [D2{i_views}, scores{i_views}] = nmsMax_mexed([i{i_views} j{i_views}],box_size_point{i_views}, scores{i_views}','center'); % use pre-compiled version
+                    [D2{i_views}, scores{i_views}] = nmsMax([i{i_views} j{i_views}],box_size_point{i_views}, scores{i_views}','center',0.5,true);
                     % Refine locations taking the weighted mean of detections scores arond the maxima found:
-                    D2{i_views} = weightedMean(D2{i_views}, Cmat, box_size_point{i_views});
-                    [D2{i_views}, scores{i_views}] = nmsMax_mexed(D2{i_views},box_size_point{i_views}, scores{i_views},'center'); % use pre-compiled version
+%                     D2{i_views} = weightedMean(D2{i_views}, Cmat, box_size_point{i_views});
+%                     [D2{i_views}, scores{i_views}] = nmsMax_mexed(D2{i_views},box_size_point{i_views}, scores{i_views},'center'); % use pre-compiled version
                     %[D2{i_views}, scores{i_views}] = nmsMax(D2{i_views},box_size_point{i_views}, scores{i_views},'center');
                     D2{1}(:,2) = D2{1}(:,2) + max(OFFSET(1),0);
                     D2{1}(:,1) = D2{1}(:,1) + split_line + max(OFFSET(2),0);
@@ -426,7 +426,7 @@ parfor i_images = 1:N_frames
                 moving = I_vel > 25; %%% FIXME: This clearly depends on image size. Must be normalized in some way.
                 D21_mov = reshape(getWindowFromImage(moving,D2{1}',round(box_size_point{1})/2),[],size(D2{1},1));
                 D22_mov = reshape(getWindowFromImage(moving,D2{2}',round(box_size_point{2})/2),[],size(D2{2},1));
-                
+
                 D21_mov = sum(D21_mov,1) >= 0.02*prod(box_size_point{1}); %%% FIXME: Find robust values for moving/not moving classification.
                 D22_mov = sum(D22_mov,1) >= 0.05*prod(box_size_point{2});
             else

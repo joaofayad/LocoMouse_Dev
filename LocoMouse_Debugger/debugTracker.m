@@ -704,7 +704,8 @@ end
 
 % Updating the plot handle, checking if it is occluded:
 if any(isnan(pos(1:2,1)))
-    pos(1:2,1) = (handles.bounding_box(1:2,current_frame) - handles.Occlusion_Grid_Bottom(:,handles.M(current_track,current_frame)-size(handles.tracks_bottom{current_point,current_frame},2)))';
+    ong_index = handles.M(current_track,current_frame) -size(handles.tracks_bottom{current_point,current_frame},2);
+    pos(1:2,1) = (handles.bounding_box(1:2,current_frame) - handles.Occlusion_Grid_Bottom(:,ong_index))';
 %     pos(2,1) = pos(2,1) + handles.data.split_line;
     set(handles.plot_handles(1,current_track),'MarkerFaceColor','none')
 else
@@ -890,7 +891,10 @@ if current_frame > 1
     for i_frame = 1:2
         % Bottom:
         if any(isnan(pos(i_frame,1:2)))
-            pos(i_frame,1:2) = handles.Occlusion_Grid_Bottom(:,handles.M(current_track,frame_vec(i_frame))-size(handles.tracks_bottom{current_point,frame_vec(i_frame)},2),frame_vec(i_frame))';
+            ong_index = handles.M(current_track,frame_vec(i_frame)) + ...
+                -size(handles.tracks_bottom{current_point,frame_vec(i_frame)},2);
+                
+            pos(i_frame,1:2) = (handles.bounding_box(:,current_frame)-handles.Occlusion_Grid_Bottom(:,ong_index))';
             ong_track(1,i_frame) = true;
         end
         
