@@ -225,7 +225,7 @@ function LocoMouse_TrackCheck_OpeningFcn(hObject, ~, handles, varargin)
     % Initializing the speed slider:
     set(handles.slider_speed,'Min',1);
     set(handles.slider_speed,'Max',90);
-    set(handles.slider_speed,'SliderStep',[5/60 0.05]);
+    set(handles.slider_speed,'SliderStep',[5/60 0.10]);
     set(handles.slider_speed,'Value',30);
     
     % Initializing the data:
@@ -1038,52 +1038,167 @@ function pushbutton_ReTrack_Callback(hObject, eventdata, handles)
         N_features_per_point_track(i_point) = model.point.(point_features{i_point}).N_points;
     end
     N_pointlike_tracks = sum(N_features_per_point_track);
-    load(DataFile,'OcclusionGrid');
-    Nong = size(OcclusionGrid,2);    
-       
-    % load debug data
-    load(DataFile,'debug');
+    % load data
     Df_cont = load(DataFile);
-    track_bottom = debug.tracks_bottom; % candidate locations
-    Unary = debug.Unary;                % location scores
-    Pairwise = debug.Pairwise;          % transition scores
-    clear debug
+    Nong = size(Df_cont.debug.Occlusion_Grid_Bottom,2);    
+       
+    
+%     track_bottom = Df_cont.debug.tracks_bottom; % candidate locations
+%     Unary = Df_cont.debug.Unary;                % location scores
+%     Pairwise = Df_cont.debug.Pairwise;          % transition scores
+%     bounding_box = Df_cont.debug.bounding_box;  % bounding box location
+%     Occlusion_Grid_Bottom = Df_cont.debug.Occlusion_Grid_Bottom; 
+%     final_tracks_c = Df_cont.debug.final_tr
 
     % Flip'n'Warp
-	[~,~,c]=ind2sub(size(tracks_corrected),find(~isnan(tracks_corrected)));
-    corrected_frames_i = c(find(diff(c) > 0));
-    tracks_corrected = tracks_corrected(:,:,corrected_frames_i);
-    tracks_corr_w = zeros(2,size(tracks_corrected,2),size(tracks_corrected,3));
-    view = [1 2; 3 4];
-    for i_tcf = 1:size(tracks_corrected,3)
-        for i_tcP = 1:size(tracks_corrected,2)
-            for view_i = 1:2
-                x = tracks_corrected(view(view_i,1),i_tcP,i_tcf);
-                y = tracks_corrected(view(view_i,2),i_tcP,i_tcf);
-                if userdata.data(video_id).flip
-                    x = userdata.data(video_id).vid.Width - x;
-                end
-                res = warpPointCoordinates([y x],userdata.data(video_id).inv_ind_warp_mapping,size(userdata.data(video_id).ind_warp_mapping));
-                x = res(2); y = res(1);
-                if userdata.data(video_id).flip
-                    x = userdata.data(video_id).vid.Width - x;
-                end
-                tracks_corr_w(view(view_i,:),i_tcP,i_tcf) = [x y];
-            end
+    %%% FIXME: Hacked to only do the bottom view tracks for the paws so far:
+    vis_paw = cell2mat(userdata.data(video_id).visibility{1}{1}(:));
+    vis_paw = vis_paw(:,:,1);
+    
+    corrected_frames_ind = find(any(vis_paw == 2,1));
+    N_corrected_frames = length(corrected_frames_ind);
+    correct_structure = struct('frame',cell(1,N_corrected_frames),'tracks',cell(1,N_corrected_frames));
+    for i_frames = 1:N_corrected_frames
+        cframes_i = corrected_frames_ind(i_frames);
+        tracksc_i = tracks_corrected(1:2,:,cframes_i);
+        
+        % Convert tracks to corrected view:
+        tracksc_i = warpPointCoordinates(tracksc_i([2 1],:)',...
+            userdata.data.inv_ind_warp_mapping,...
+            size(userdata.data.ind_warp_mapping),...
+            false); % No pre and post flipping
+        tracksc_i = tracksc_i(:,[2 1])';
+        
+        % Handling flipping outside of the warp. 
+        % FIXME: The warp should have a pre and post flip boolean.
+        if userdata.data(video_id).flip
+            tracksc_i(1,:) = size(userdata.data.inv_ind_warp_mapping,2) - tracksc_i(1,:) + 1; 
+            tracksc_i = tracksc_i(:,[3 4 1 2 5],:);
+        end
+        tracksc_i(isnan(tracksc_i(:))) = -1; % FIXME: What if the track really is missing?
+        
+        correct_structure(i_frames).frame = corrected_frames_ind(i_frames);
+        correct_structure(i_frames).tracks = tracksc_i(:,1:4);
+    end
+    
+    [tracks_corrected,D] = retrackMatch2nd(correct_structure, Df_cont);
+    
+    % Fix the tracking matrices:
+    % - Check which tracks changed and which ones are kept.
+    % - Update Unary and Pairwise
+    % - Run match2nd with ALL THE PERMUTATIONS!
+        
+    % Updating the track structure:
+     for i_tracks = 1:4 % FIXME: Paw only
+        userdata.data(video_id).track{1}{1}{i_tracks} = cat(4,tracks_corrected(1:2,i_tracks,:),tracks_corrected(3:4,i_tracks,:));
+     end
+     
+    % Saving Changes: %%% FIXME: If the Unary and Pairwise matrices are not stored, the tracks can only be corrected once! 
+    set(handles.figure1,'UserData',userdata);
+    displayImage([],[],handles);
+    guidata(handles.figure1,handles);
+end
+
+function [track_bottom, D] = retrackMatch2nd(correct_structure, D)
+% Re-runs the match2nd code with manually corrected images in some frames.
+% INPUT:
+%
+% correct_structure: A structure array with fields:
+%   * frame: The index of the frame to fix.
+%   * tracks: A dim x features matrix with the new locations for the
+%   tracks.
+%
+% D: The contents of the original save file.
+%
+% OUTPUT:
+%
+% track_bottom: The new tracks.
+%
+% Unary: The new unary potentials.
+%
+% Pairwise: The new pairwise potentials.
+
+
+New_score = 1;
+alpha_vel = 1E-1;
+Nong = size(D.debug.Occlusion_Grid_Bottom,2);
+N_frames = size(D.final_tracks_c,3);
+
+for i_changes = 1:length(correct_structure)
+    
+    i_frame = correct_structure(i_changes).frame;
+    tracks = correct_structure(i_changes).tracks;
+    
+    % Paw tracks (for now just them):
+    candidates_paw = NaN(3,4);
+    candidates_paw_joint = NaN(4,4);
+    for i_paw = 1:4
+        if any(tracks(:,i_paw) < 0)
+            % FIXME: Implement remain and how to edit/not edit the pairwise
+            % matrices.
+            candidates_paw(1:2,i_paw) = D.final_tracks_c(1:2,i_paw,i_frame);
+            candidates_paw_joint(1:2,i_paw) = D.final_tracks_c(1:2,i_paw);
+        else
+            % Candidates and unary:
+            candidates_paw(1:2,i_paw) = tracks(:,i_paw);
+            candidates_paw_joint(1:2,i_paw) = tracks(:,i_paw);
+        end
+        candidates_paw(3,i_paw) = New_score;
+        candidates_paw_joint(4,i_paw) = New_score;
+    end
+    D.debug.Unary{1,i_frame} = cat(1,New_score*eye(4),zeros(Nong,4));
+    D.debug.tracks_bottom{1,i_frame} = candidates_paw;
+    
+    % Pairwise:
+    % Compute the pairwise matrix from the points (i_frames < N_frames -1)
+    OGi = bsxfun(@minus,D.debug.bounding_box(1:2,i_frame),D.debug.Occlusion_Grid_Bottom);
+    if (i_frame < N_frames - 1)
+        D.debug.Pairwise{1, i_frame} = computePairwiseCost(D.debug.tracks_bottom{1,i_frame}(1:2,:),D.debug.tracks_bottom{1,i_frame+1}(1:2,:),OGi,abs(D.debug.xvel(i_frame))+D.debug.occluded_distance,alpha_vel);
+    end
+    
+    % Compute the pairwise matrix to the point (i_frames > 1)
+    if (i_frame > 1)
+        D.debug.Pairwise{1, i_frame-1} = computePairwiseCost(D.debug.tracks_bottom{1,i_frame-1}(1:2,:),D.debug.tracks_bottom{1,i_frame}(1:2,:),OGi,abs(D.debug.xvel(i_frame))+D.debug.occluded_distance,alpha_vel);
+        % Breaking links between occluded points to make sure only the
+        % manually labelled points are reachable:
+%         D.debug.Pairwise{1,i_frame-1}(5:end,size(D.debug.tracks_bottom{1,i_frame-1},2)+1:end) = 0;
+        D.debug.Pairwise{1,i_frame-1}(5:end,:) = 0;
+    end
+    
+    %%% FIXME: Make sure all points are connected to different candidates
+    %%% on the previous frame. If not the program will crash.
+end
+% Re-run match2nd with all the permutations.
+M_new =  match2nd(D.debug.Unary(1,:), D.debug.Pairwise(1,:), [],Nong, 0);
+
+% Get new tracks: % FIXME: This definitely needs to be modular!
+N_points = 4;
+final_tracks_c_new = NaN(2,5,N_frames);
+
+for i_frames = 1:N_frames
+    
+    for i_features = 1:N_points
+        
+        if i_features < 5
+            points = 1;
+        else
+            points = 2;
+        end
+        
+        if M_new(i_features,i_frames) <= size(D.debug.tracks_bottom{points,i_frames},2)
+            final_tracks_c_new(1:2,i_features,i_frames) = D.debug.tracks_bottom{points,i_frames}(1:2,M_new(i_features,i_frames));
         end
     end
-    Mean_X = round(nanmean(tracks_corr_w([1 3],:,:)));
-    tracks_corr_w(1,:,:) = Mean_X;
-    tracks_corr_w(3,:,:) = Mean_X;
     
-    % manipulate priors in track_bottom, Unary and Pairwise 
-%          DE_SemiAutoTracking
-%          [pt, fn, ext] = fileparts(userdata.data(video_id).DataFile);
-%          fn = [fn,'_NEWTRACK'];
-%          save([pt filesep fn ext],'newtrack')
-	DE_ManipulatePriors
-    userdata.data(video_id).new_track_bottom = new_track_bottom;
 end
+% Side view for now unchanged:
+final_tracks_c_new = cat(1,final_tracks_c_new,D.final_tracks_c(3,:,:));
+%final_tracks_c_new(:,5,:) = final_tracks_c(:,5,:); %%% FIXME: No snout yet!
+
+% Convert to original_view_tracks:
+[track_bottom,~] = convertTracksToUnconstrainedView(final_tracks_c_new,D.tracks_tail_c,size(D.data.ind_warp_mapping),D.data.ind_warp_mapping,D.data.flip,1);
+end
+
 
 % CLEAR ALL CORRECTIONS
 % --- Executes on button press in pushbutton_ClearCorrections.
@@ -2625,22 +2740,22 @@ function handles = addVideoFile(handles,path_name,file_name)
             end
         end
 
-        if isempty(userdata.data(video_id).calibration_path)
-            % Check if there is a calibration file with the same name:
-            calpath = fullfile(vid.Path,[fname '_calibration.mat']);
-            if exist(calpath,'file')
-                % Adding a new background image:
-                [handles,N] = addDistortionCorrection(handles,calpath);
-                userdata.data(video_id).calibration_path = calpath;
-                userdata.data(video_id).calibration_popup_id = N;
-                L = load(calpath);
-                userdata.data(video_id).ind_warp_mapping = L.ind_warp_mapping;
-                userdata.data(video_id).inv_ind_warp_mapping = L.inv_ind_warp_mapping;
-                userdata.data(video_id).split_line = L.split_line;
-                set(handles.figure1,'userdata',userdata);
-                edit_split_line_Callback([],[],handles);
-            end
-        end
+%         if isempty(userdata.data(video_id).calibration_path)
+%             % Check if there is a calibration file with the same name:
+%             calpath = fullfile(vid.Path,[fname '_calibration.mat']);
+%             if exist(calpath,'file')
+%                 % Adding a new background image:
+%                 [handles,N] = addDistortionCorrection(handles,calpath);
+%                 userdata.data(video_id).calibration_path = calpath;
+%                 userdata.data(video_id).calibration_popup_id = N;
+%                 L = load(calpath);
+%                 userdata.data(video_id).ind_warp_mapping = L.ind_warp_mapping;
+%                 userdata.data(video_id).inv_ind_warp_mapping = L.inv_ind_warp_mapping;
+%                 userdata.data(video_id).split_line = L.split_line;
+%                 set(handles.figure1,'userdata',userdata);
+%                 edit_split_line_Callback([],[],handles);
+%             end
+%         end
 
        
         if ~isempty(userdata.data(end).bkg) % Check if background was loaded
@@ -3023,7 +3138,7 @@ function axes_frame_ButtonDownFcn(hObject,eventdata,handles)
     % If showing corrected images, p needs to be warped back to original:
     if handles.radiobutton_corrected == get(handles.uipanel_distortion,'SelectedObject')
         % FIXME this appears to always return NaN:
-        p = warpPointCoordinates(p,userdata.data(video_id).inv_ind_warp_mapping,size(userdata.data(video_id).ind_warp_mapping));
+        p([2 1]) = warpPointCoordinates(p([2 1]),userdata.data(video_id).inv_ind_warp_mapping,size(userdata.data(video_id).ind_warp_mapping),userdata.data.flip);
     end
     
    
@@ -3110,7 +3225,6 @@ function displayImage(obj,event,handles)
         Idist = Idist(:,xIDX);
     end
     
-	
     if get(handles.uipanel_distortion,'SelectedObject') == handles.radiobutton_original
         set(handles.image,'CData',Iorg);
         set(handles.image,'XData',[1 size(Iorg,2)])
@@ -3228,13 +3342,13 @@ function [userdata] = plotBoxImage_proper(userdata, video_id, lind,  warp, i_vie
     % if we don't have coordinates in this view but in the other, 
     % we want to suggest an x value based on the other view
     if any(isnan(track_k)) && ~any(isnan(track_ko))
-        track_ko = warpPointCoordinates(track_ko([2 1])',userdata.data(video_id).inv_ind_warp_mapping,size(userdata.data(video_id).inv_ind_warp_mapping),flip);
+        track_ko = warpPointCoordinates(track_ko([2 1])',userdata.data(video_id).inv_ind_warp_mapping,size(userdata.data(video_id).ind_warp_mapping),flip);
         if i_view == 1
             track_ko(1) = track_ko(1) + userdata.data(video_id).split_line;
         else
             track_ko(1) = track_ko(1) - userdata.data(video_id).split_line;
         end
-        track_ko = warpPointCoordinates(track_ko,userdata.data(video_id).ind_warp_mapping,size(userdata.data(video_id).ind_warp_mapping),flip);
+        track_ko = warpPointCoordinates(track_ko,userdata.data(video_id).ind_warp_mapping,size(userdata.data(video_id).inv_ind_warp_mapping),flip);
         track_k(1)=track_ko(2);
     end   
     
@@ -3248,7 +3362,7 @@ function [userdata] = plotBoxImage_proper(userdata, video_id, lind,  warp, i_vie
             y = track_k(2);
         end
         % track_w = warpPointCoordinates([y x],userdata.data(video_id).inv_ind_warp_mapping,size(userdata.data(video_id).inv_ind_warp_mapping));
-        track_w = warpPointCoordinates([y x],userdata.data(video_id).ind_warp_mapping,size(userdata.data(video_id).inv_ind_warp_mapping),flip);
+        track_w = warpPointCoordinates([y x],userdata.data(video_id).inv_ind_warp_mapping,size(userdata.data(video_id).ind_warp_mapping),false);
         if isnan(track_k(2))
             track_k = [track_w(2) NaN];
         else
