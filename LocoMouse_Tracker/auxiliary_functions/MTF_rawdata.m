@@ -67,8 +67,8 @@ else
     Bkg = data.bkg;
 end
 
-% N_frames = floor(vid.Duration * vid.FrameRate);
-N_frames = 500;
+N_frames = floor(vid.Duration * vid.FrameRate);
+% N_frames = 500;
 % warning('frame number was set to 10 for debugging reasons! - DE')
 
 N_views = 2; % FIXME: Should come from the code...

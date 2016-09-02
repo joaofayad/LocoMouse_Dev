@@ -20,7 +20,7 @@ if isempty(IDX)
     IDX  = 1:prod(image_size);
 end
 
-disp(['flip: ' num2str(flip)])
+% disp(['flip: ' num2str(flip)])
 if flip
     % Vertical flip of tracks: 
     final_tracks(1,:,:) = size(IDX,2) - final_tracks(1,:,:) + 1;

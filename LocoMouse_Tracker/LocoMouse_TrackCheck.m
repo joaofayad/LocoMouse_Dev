@@ -531,7 +531,8 @@ function data = initializeUserDataStructure(userdata,vid)
         'UseLimitedWindow', true, ...
         'Good_Epochs',[], ...
         'BadMovie', false, ...
-        'DataFile','');
+        'DataFile','',...
+        'DebugData',[]);
     clear empty_track empty_visibility
 
     % If image correction data was loaded, enable the image correction
@@ -1038,17 +1039,6 @@ function pushbutton_ReTrack_Callback(hObject, eventdata, handles)
         N_features_per_point_track(i_point) = model.point.(point_features{i_point}).N_points;
     end
     N_pointlike_tracks = sum(N_features_per_point_track);
-    % load data
-    Df_cont = load(DataFile);
-    Nong = size(Df_cont.debug.Occlusion_Grid_Bottom,2);    
-       
-    
-%     track_bottom = Df_cont.debug.tracks_bottom; % candidate locations
-%     Unary = Df_cont.debug.Unary;                % location scores
-%     Pairwise = Df_cont.debug.Pairwise;          % transition scores
-%     bounding_box = Df_cont.debug.bounding_box;  % bounding box location
-%     Occlusion_Grid_Bottom = Df_cont.debug.Occlusion_Grid_Bottom; 
-%     final_tracks_c = Df_cont.debug.final_tr
 
     % Flip'n'Warp
     %%% FIXME: Hacked to only do the bottom view tracks for the paws so far:
@@ -1057,6 +1047,12 @@ function pushbutton_ReTrack_Callback(hObject, eventdata, handles)
     
     corrected_frames_ind = find(any(vis_paw == 2,1));
     N_corrected_frames = length(corrected_frames_ind);
+    
+    if N_corrected_frames == 0
+        warning('No manual adjustments found!');
+        return;
+    end
+    
     correct_structure = struct('frame',cell(1,N_corrected_frames),'tracks',cell(1,N_corrected_frames));
     for i_frames = 1:N_corrected_frames
         cframes_i = corrected_frames_ind(i_frames);
@@ -1081,7 +1077,7 @@ function pushbutton_ReTrack_Callback(hObject, eventdata, handles)
         correct_structure(i_frames).tracks = tracksc_i(:,1:4);
     end
     
-    [tracks_corrected,D] = retrackMatch2nd(correct_structure, Df_cont);
+    [tracks_corrected, userdata.data(video_id).DebugData] = retrackMatch2nd(correct_structure, userdata.data(video_id).DebugData, userdata.data(video_id).ind_warp_mapping,userdata.data(video_id).flip);
     
     % Fix the tracking matrices:
     % - Check which tracks changed and which ones are kept.
@@ -1090,7 +1086,15 @@ function pushbutton_ReTrack_Callback(hObject, eventdata, handles)
         
     % Updating the track structure:
      for i_tracks = 1:4 % FIXME: Paw only
-        userdata.data(video_id).track{1}{1}{i_tracks} = cat(4,tracks_corrected(1:2,i_tracks,:),tracks_corrected(3:4,i_tracks,:));
+        % Copying the new tracks:
+        userdata.data(video_id).LM_track{1}{1}{i_tracks} = cat(4,tracks_corrected(1:2,i_tracks,:),tracks_corrected(3:4,i_tracks,:));
+        
+        % Erasing the manual labels:
+        userdata.data(video_id).track{1}{1}{i_tracks} = nan(size(userdata.data(video_id).track{1}{1}{i_tracks}));
+        
+        % Erasing the manual visibility:
+        userdata.data(video_id).visibility{1}{1}{i_tracks} = ones(size(userdata.data(video_id).visibility{1}{1}{i_tracks}));
+        
      end
      
     % Saving Changes: %%% FIXME: If the Unary and Pairwise matrices are not stored, the tracks can only be corrected once! 
@@ -1099,7 +1103,7 @@ function pushbutton_ReTrack_Callback(hObject, eventdata, handles)
     guidata(handles.figure1,handles);
 end
 
-function [track_bottom, D] = retrackMatch2nd(correct_structure, D)
+function [track_bottom, D] = retrackMatch2nd(correct_structure, D, ind_warp_mapping, flip)
 % Re-runs the match2nd code with manually corrected images in some frames.
 % INPUT:
 %
@@ -1119,10 +1123,15 @@ function [track_bottom, D] = retrackMatch2nd(correct_structure, D)
 % Pairwise: The new pairwise potentials.
 
 
-New_score = 1;
+New_score = 100;
 alpha_vel = 1E-1;
 Nong = size(D.debug.Occlusion_Grid_Bottom,2);
 N_frames = size(D.final_tracks_c,3);
+
+% Copying old data:
+Unary = D.debug.Unary;
+Pairwise = D.debug.Pairwise;
+tracks_bottom = D.debug.tracks_bottom;
 
 for i_changes = 1:length(correct_structure)
     
@@ -1146,57 +1155,98 @@ for i_changes = 1:length(correct_structure)
         candidates_paw(3,i_paw) = New_score;
         candidates_paw_joint(4,i_paw) = New_score;
     end
-    D.debug.Unary{1,i_frame} = cat(1,New_score*eye(4),zeros(Nong,4));
-    D.debug.tracks_bottom{1,i_frame} = candidates_paw;
+    Unary{1,i_frame} = cat(1,New_score*eye(4),zeros(Nong,4));
+    tracks_bottom{1,i_frame} = candidates_paw;
     
     % Pairwise:
     % Compute the pairwise matrix from the points (i_frames < N_frames -1)
     OGi = bsxfun(@minus,D.debug.bounding_box(1:2,i_frame),D.debug.Occlusion_Grid_Bottom);
     if (i_frame < N_frames - 1)
-        D.debug.Pairwise{1, i_frame} = computePairwiseCost(D.debug.tracks_bottom{1,i_frame}(1:2,:),D.debug.tracks_bottom{1,i_frame+1}(1:2,:),OGi,abs(D.debug.xvel(i_frame))+D.debug.occluded_distance,alpha_vel);
+        Pairwise{1, i_frame} = computePairwiseCost(tracks_bottom{1,i_frame}(1:2,:),tracks_bottom{1,i_frame+1}(1:2,:),OGi,abs(D.debug.xvel(i_frame))+D.debug.occluded_distance,alpha_vel);
     end
     
     % Compute the pairwise matrix to the point (i_frames > 1)
     if (i_frame > 1)
-        D.debug.Pairwise{1, i_frame-1} = computePairwiseCost(D.debug.tracks_bottom{1,i_frame-1}(1:2,:),D.debug.tracks_bottom{1,i_frame}(1:2,:),OGi,abs(D.debug.xvel(i_frame))+D.debug.occluded_distance,alpha_vel);
+        Pairwise{1, i_frame-1} = computePairwiseCost(tracks_bottom{1,i_frame-1}(1:2,:),tracks_bottom{1,i_frame}(1:2,:),OGi,abs(D.debug.xvel(i_frame))+D.debug.occluded_distance,alpha_vel);
         % Breaking links between occluded points to make sure only the
         % manually labelled points are reachable:
 %         D.debug.Pairwise{1,i_frame-1}(5:end,size(D.debug.tracks_bottom{1,i_frame-1},2)+1:end) = 0;
-        D.debug.Pairwise{1,i_frame-1}(5:end,:) = 0;
+        Pairwise{1,i_frame-1}(5:end,:) = 0;
     end
     
     %%% FIXME: Make sure all points are connected to different candidates
     %%% on the previous frame. If not the program will crash.
 end
 % Re-run match2nd with all the permutations.
-M_new =  match2nd(D.debug.Unary(1,:), D.debug.Pairwise(1,:), [],Nong, 0);
+M_new =  match2nd(Unary(1,:), Pairwise(1,:), [],Nong, 0);
 
-% Get new tracks: % FIXME: This definitely needs to be modular!
-N_points = 4;
-final_tracks_c_new = NaN(2,5,N_frames);
+valid_tracks = all(M_new>0,2);
 
-for i_frames = 1:N_frames
+if ~all(valid_tracks)
+    warning('Constraints do not result in valid trajectories. Please edit a frame closer to the previously edited frame: NUM');
+else
+    % Get new tracks: % FIXME: This definitely needs to be modular!
+    N_points = 4;
+    final_tracks_c_new = NaN(2,5,N_frames);
+    
     
     for i_features = 1:N_points
-        
         if i_features < 5
             points = 1;
         else
             points = 2;
         end
         
-        if M_new(i_features,i_frames) <= size(D.debug.tracks_bottom{points,i_frames},2)
-            final_tracks_c_new(1:2,i_features,i_frames) = D.debug.tracks_bottom{points,i_frames}(1:2,M_new(i_features,i_frames));
+        %     if ~valid_tracks(i_features)
+        %         warning('Could not find a valid trajectory for track %d. Rejecting changes. Try editing a smaller segment.',i_features);
+        %
+        %         % Adding the candidate that was previously chosen to the new
+        %         % candidate list, if any:
+        %         for i_changes = 1:length(correct_structure)
+        %             i_frame = correct_structure(i_changes).frame;
+        %
+        %             % Copying old tracks:
+        %             final_tracks_c_new(1:2,i_features,i_frame) = D.final_tracks_c(1:2,i_features,i_frame);
+        %
+        %             if D.debug.M(i_features,i_frame) <= size(D.debug.tracks_bottom{1,i_frame},2)
+        %                 % Replace manual candidate for the previously existing
+        %                 % candidate:
+        %                 tracks_bottom{1,i_frame}(:,i_features) = D.debug.tracks_bottom{1,i_frame}(:,D.debug.M(i_features,i_frame));
+        %                 M_new(i_features,i_frame) = i_features;
+        %
+        %             else
+        %                 % Remove the candidate:
+        %                 tracks_bottom{1,i_frame}(:,i_features) = [];
+        %                 M_new(i_features,i_frame) = size(tracks_bottom{1,i_frame},2)+1; % I don't think which ONG matters.
+        %
+        %             end
+        %
+        %         end
+        %
+        %         continue;
+        %     end
+        
+        for i_frames = 1:N_frames
+            if M_new(i_features,i_frames) <= size(tracks_bottom{points,i_frames},2)
+                final_tracks_c_new(1:2,i_features,i_frames) = tracks_bottom{points,i_frames}(1:2,M_new(i_features,i_frames));
+            end
         end
+        
     end
     
+    % Side view for now unchanged:
+    D.final_tracks_c = cat(1,final_tracks_c_new,D.final_tracks_c(3,:,:));
+    %final_tracks_c_new(:,5,:) = final_tracks_c(:,5,:); %%% FIXME: No snout yet!
+    
+    % Save changes to unary, pairwise and candidates:
+    D.debug.Unary = Unary;
+    D.debug.Pairwise = Pairwise;
+    D.debug.tracks_bottom = tracks_bottom;
+    D.debug.M(1:4,:) = M_new;
 end
-% Side view for now unchanged:
-final_tracks_c_new = cat(1,final_tracks_c_new,D.final_tracks_c(3,:,:));
-%final_tracks_c_new(:,5,:) = final_tracks_c(:,5,:); %%% FIXME: No snout yet!
 
 % Convert to original_view_tracks:
-[track_bottom,~] = convertTracksToUnconstrainedView(final_tracks_c_new,D.tracks_tail_c,size(D.data.ind_warp_mapping),D.data.ind_warp_mapping,D.data.flip,1);
+[track_bottom,~] = convertTracksToUnconstrainedView(D.final_tracks_c,D.tracks_tail_c,size(ind_warp_mapping),ind_warp_mapping,flip,1);
 end
 
 
@@ -2816,7 +2866,7 @@ function listbox_files_Callback(hObject, eventdata, handles)
 
         expected_data_file = [out_path_data filesep trial_name,'.mat'];
 
-        if exist(expected_data_file,'file')==2
+        if exist(expected_data_file,'file') == 2
             loaded_data = load(expected_data_file);
             handles = loadtrack(handles, loaded_data);
             [userdata,video_id] = getGUIStatus(handles);
@@ -3663,6 +3713,9 @@ function handles = loadtrack(handles,loaded_data)
     if isempty(find(ismember(get(handles.popupmenu_distortion_correction_files,'String'),'Data')))
         set(handles.popupmenu_distortion_correction_files,'String',[get(handles.popupmenu_distortion_correction_files,'String');{'Data'}]);
     end
+    
+    % Debug data for the manipulation of tracks:
+    userdata.data(video_id).DebugData = rmfield(loaded_data,{'data','final_tracks','tracks_tail'});
     
 	userdata.data(video_id).flip = loaded_data.data.flip;
     userdata.data(video_id).scale = loaded_data.data.scale;
