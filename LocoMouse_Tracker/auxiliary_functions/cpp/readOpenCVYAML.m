@@ -1,5 +1,5 @@
 function S = readOpenCVYAML(file_name)
-% Basic reading of opencvyaml tested on my own files only.
+% Basic reading of opencv yaml tested on my own files only.
 % Very inneficient!
 
 fid = fopen(file_name,'r');

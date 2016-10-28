@@ -36,7 +36,14 @@ delete(output_file);
 final_tracks_c = permute(cat(3,output.paw_tracks0,output.paw_tracks1,output.paw_tracks2,output.paw_tracks3,output.snout_tracks0),[2 3 1]);
 final_tracks_c(final_tracks_c(:)<0) = NaN;
 final_tracks_c = final_tracks_c + 1;
-tracks_tail_c = NaN(3,1,size(final_tracks_c,3));
+if isfield(output,'tracks_tail')
+    tracks_tail_c = reshape(output.tracks_tail,2,15,[]);
+    tracks_tail_c = cat(tracks_tail_c,NaN(1,15,size(tracks_tail_c,2)));
+    tracks_tail_c(tracks_tail_c<0) = NaN;
+    tracks_tail_c = tracks_tail_c + 1;
+else
+    tracks_tail_c = NaN(3,1,size(final_tracks_c,3));
+end
 % FIXME: Make CPP code output the debug structures as well.
 %data = []; Need to adapt the export function to output all the relevant
 %parameters.

@@ -54,6 +54,11 @@ end
 
 [handles.root_path,~,~] = fileparts([mfilename('fullpath'),'*.m']);
 
+% Checking the number of frames: Should be the number of frames of the
+% video except when the tracks have less data.
+handles.point_tracks = varargin{1}{2};
+handles.N_frames = min(handles.vid.NumberOfFrames,size(handles.point_tracks,3));
+% handles.N_frames = 
 % Reading the background image:
 if ischar(handles.bkg)
     if strcmpi(handles.bkg,'compute')
@@ -65,8 +70,8 @@ if ischar(handles.bkg)
         else
             convert_rgb2gray = false;
         end
-        
-        if handles.N_frames < N
+        handles.N_frames = (handles.vid.Duration*handles.vid.FrameRate); 
+        if  handles.N_frames < N
             bkgi = rgb2gray(read(handles.vid,[1 handles.N_frames]));
             
             if convert_rgb2gray
@@ -94,7 +99,7 @@ if ischar(handles.bkg)
     end
 end
 
-handles.point_tracks = varargin{1}{2};
+
 if ~isempty(handles.point_tracks)
 % For display it is easier to permute these:
 handles.point_tracks = permute(handles.point_tracks,[2 1 3]);
@@ -177,10 +182,6 @@ handles.color_choice = c;clear c;
 % Initializing the track list (Default across the system): 
 set(handles.popupmenu_tracks,'String',char({'FR Paw';'HR Paw';'FL Paw';'HL Paw';'Snout';'Tail'}));
 set(handles.popupmenu_tracks,'Value',1);
-
-% Checking the number of frames: Should be the number of frames of the
-% video except when the tracks have less data.
-handles.N_frames = min(handles.vid.NumberOfFrames,size(handles.point_tracks,3));
 
 % Initializing the image slider:
 set(handles.slider_frames,'Max',handles.N_frames);
@@ -622,12 +623,12 @@ if ~isequal(file_name,0) && ~isequal(path_name,0)
     c_pointer = onCleanup(@()(watchoff(fig)));
     
     % Creating the video object:
-    writerObj = VideoWriter(fullfile(path_name,file_name),'MPEG-4');
-    writerObj.FrameRate = 30;
+%     writerObj = VideoWriter(fullfile(path_name,file_name),'MPEG-4');
+%     writerObj.FrameRate = 30;
     % writerObj.ColorChannels = 1;
-    writerObj.Quality = 100;
-    open(writerObj);
-    c_video = onCleanup(@()(close(writerObj)));
+%     writerObj.Quality = 100;
+%     open(writerObj);
+%     c_video = onCleanup(@()(close(writerObj)));
 
     % Play the video to entertain the user while the images are generated and
     % saved into the video object.
@@ -641,9 +642,9 @@ if ~isequal(file_name,0) && ~isequal(path_name,0)
         I = uint8(I/max(I(:))*255);
         set(handles.image,'CData',I);
         updateMarkers(handles,i_images);
-%         export_fig(handles.axes1,'temp_fig.png','-native')
+        export_fig(handles.axes1,sprintf('ladder_%03d.png',i_images),'-native');
 %         writeVideo(writerObj, imread('temp_fig.png'));
-        writeVideo(writerObj, getframe(handles.axes1));
+%         writeVideo(writerObj, getframe(handles.axes1));
     end
 end
 guidata(hObject,handles);
