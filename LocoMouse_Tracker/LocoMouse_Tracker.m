@@ -7,7 +7,7 @@ function varargout = LocoMouse_Tracker(varargin)
 % Author: Joao Fayad (joao.fayad@neuro.fchampalimaud.org)
 % Last Modified: 17/11/2014
 
-% Last Modified by GUIDE v2.5 15-Jan-2016 15:16:59
+% Last Modified by GUIDE v2.5 28-Oct-2016 13:52:19
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -750,7 +750,8 @@ function handles = changeGUIEnableStatus(handles,set_value)
 handle_list = [ handles.pushbutton_remove, ...
     handles.pushbutton_clear_filelist, ...
     handles.pushbutton_start, ...
-    handles.listbox_files];
+    handles.listbox_files,...
+    handles.pushbutton_cluster];
 set(handle_list,'Enable',set_value);
 
 
@@ -991,3 +992,167 @@ function pushbutton_clear_filelist_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 set(handles.listbox_files,'String',{});
 handles = changeGUIEnableStatus(handles,'off');
+
+
+% --- Executes on button press in pushbutton_cluster.
+function pushbutton_cluster_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton_cluster (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+%%FIXME: Check how to make sure whe have access to the cluster on the
+%%current machine.
+
+%%FIXME: Where could we configure the cluster folders?
+locomouse_cpp_cluster_root = '/mirror/LocoMouse_cpp';
+locomouse_cpp_models = fullfile(locomouse_cpp_cluster_root, 'model_files');
+locomouse_cpp_calibration = fullfile(locomouse_cpp_cluster_root, 'calibration_files');
+locomouse_cpp_config = fullfile(locomouse_cpp_cluster_root, 'configuration_files');
+job_name = 'test_cluster_job';
+
+if ~exist('/mirror/','dir')
+%     error('Could not find the /mirror/ directory. Exporting to the cluster must be done from the cluster master node only!');
+end
+file_list = get(handles.listbox_files,'String');
+
+% Calibration file;
+calibration_file_pos = get(handles.popupmenu_calibration_files,'Value');
+calibration_file = get(handles.popupmenu_calibration_files,'String');
+calibration_file = calibration_file{calibration_file_pos};
+
+% Model file:
+model_file_pos = get(handles.popupmenu_model,'Value');
+model_file = get(handles.popupmenu_model,'String');
+model_file = model_file{model_file_pos};
+
+model_file_yml = fullfile(locomouse_cpp_models);
+calibration_file_yml = fullfile(locomouse_cpp_calibration);
+
+if ~exist(model_file_yml,'file')
+    model_file_yml_matlab = fullfile(handles.root_path,'model_files',[model_file '.yml']);
+    if exist(model_file_yml_matlab,'file')
+        success = copyfile(model_file_yml_matlab,model_file_yml);
+        if ~success
+%             error('Error copying model yml file. Check for writing permissions!');
+        end
+    else
+        handles = loadModel(fullfile(handles.root_path,'model_files',[model_file '.mat']),handles);
+        exportLocoMouseModelToOpenCV(model_file_yml,handles.model);
+    end
+end
+
+if ~exist(calibration_file_yml,'file')
+    calibration_file_yml_matlab = fullfile(handles.root_path,'calibration_files',[calibration_file '.yml']);
+
+    if exist(calibration_file_yml_matlab,'file')
+        success = copyfile(calibration_file_yml_matlab,model_file_yml);
+        if ~success
+%             error('Error copying calibration yml file. Check for writing permissions!');
+        end
+    else
+        handles = loadCalibrationFile(fullfile(handles.root_path,'calibration_files',[calibration_file '.mat']),handles);
+        exportLocoMouseModelToOpenCV(model_file_yml,rmfield(handles.data,{'vid','bkg','flip'}));
+    end
+end
+
+% Output and background functions:
+bkg_mode = get(handles.popupmenu_background_mode,'Value');
+output_mode = get(handles.popupmenu_output_mode,'Value');
+
+bkg_fun = get(handles.popupmenu_background_mode,'String');
+bkg_fun = bkg_fun{bkg_mode};
+
+output_fun = get(handles.popupmenu_output_mode,'String');
+output_fun = output_fun{output_mode};
+
+% Reading output path:
+output_path = get(handles.edit_output_path,'String');
+
+% Checking which side the mouse faces:
+switch handles.MouseOrientation.Value
+    case 2
+        flip_char = 'LR';
+    case 3
+        flip_char = 'R';
+    case 4
+        flip_char = 'L';
+end
+
+% Checking C++ locomouse mode: [joaofayad]
+bb_choice = get(handles.BoundingBox_choice,'Value');
+[p_boundingBoxFunctions, ~, ~]=fileparts(which('computeMouseBox')); % find the folder containing BoundingBoxOptions.mat
+load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'ComputeMouseBox_cmd_string','ComputeMouseBox_option'); % load bounding box option information
+if iscell(ComputeMouseBox_cmd_string{bb_choice})
+    cpp_config_file = fullfile(locomouse_cpp_config,ComputeMouseBox_cmd_string{bb_choice}{2});
+else
+    error('The cluster can only run the C++ version of the code.');
+end
+
+disp('----------------[Submitting job to cluster]----');
+SaveSettings_Callback(hObject, eventdata, handles, 'GUI_Recovery_Settings.mat');
+
+% Create a job
+openLavaJobArray(job_name, file_list, bkg_fun, flip_char, config_file, model_file_yml, calibration_file_yml);
+
+function [] = openLavaJobArray(job_name, file_list, bkg_fun, flip_char, config_file, model_file, calibration_file, video_files, bkg_files, side_chars)
+
+% Generate a file with the videos
+[video_files, bkg_files, side_chars] = filesForOpenLavaJob(job_name, file_list, bkg_fun, flip_char);
+
+job_fid = fopen(sprintf('%s.job',job_name),'w');
+
+fprintf(job_fid,'#BSUB -o %s.out\n',job_name);
+fprintf(job_fid,'#BSUB -e %s.err\n',job_name);
+fprintf(job_fid,'#!/bin/bash\n');
+fprintf(job_fid,'#echo $LSB_JOBINDEX\n');
+fprintf(job_fid,'file_name=$(sed "${LSB_JOBINDEX}q;d" %s)',video_files);
+fprintf(job_fid,'bkg_name=$(sed "${LSB_JOBINDEX}q;d" %s)', bkg_files);
+fprintf(job_fid,'side_char=$(sed "$(LSB_JOBINDEX}q;d" %s)',side_chars);
+fprintf(job_fid,'echo "$file_name"\n');
+fprintf(job_fid,'./LocoMouse %s ${file_name} ${bkg_name} %s %s ${side_char}',config_file,model_file,calibration_file);
+
+
+%%% Printing files necessary for cluster job
+function [] = filesForOpenLavaJob(job_name, file_list, bkg_fun, char_flip)
+%time = fix(clock);
+job_dir = fullfile('/mirror',job_name);
+if ~exist(job_dir,'dir')
+    mkdir(job_dir);
+end
+
+video_files = fullfile(job_dir,fprintf('%s_video_list',job_name));
+bkg_files = fullfile(job_dir,fprintf('%s_bkg_list',job_name));
+side_chars = fullfile(job_dir,fprintf('%s_side_list',job_name));
+
+videos_fid = fopen(video_files,'w');
+bkg_fid = fopen(bkg_files,'w');
+side_fid = fopen(side_chars,'w');
+
+if any([videos_fid, bkg_fid, side_fid] < 0)
+    error('Could not create the auxiliary files for the openlava job. Check writing permissions!');
+end
+
+cleanfid = onCleanup(@()(fclose([videos_fid bkg_fid side_fid])));
+
+for i_files = 1:length(file_list)
+    fprintf(videos_fid,file_list{i_files});
+    
+    feval(bkg_fun,file_list{i_files});
+    fprintf(bkg_fid,bkg_file);
+    
+    % Compute side from file name:
+    if length(char_flip) > 1
+        fprintf(side_fid,file_list{i_files}(end-4));
+    else
+        fprintf(side_fid,char_flip);
+    end
+end
+
+
+
+
+
+
+
+
+
