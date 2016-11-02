@@ -1032,8 +1032,8 @@ model_file_pos = get(handles.popupmenu_model,'Value');
 model_file = get(handles.popupmenu_model,'String');
 model_file = model_file{model_file_pos};
 
-model_file_yml = fullfile(locomouse_cpp_models);
-calibration_file_yml = fullfile(locomouse_cpp_calibration);
+model_file_yml = fullfile(locomouse_cpp_models,[model_file '.yml']);
+calibration_file_yml = fullfile(locomouse_cpp_calibration, [calibration_file '.yml']);
 
 if ~exist(model_file_yml,'file')
     model_file_yml_matlab = fullfile(handles.root_path,'model_files',[model_file '.yml']);
@@ -1099,37 +1099,41 @@ disp('----------------[Submitting job to cluster]----');
 SaveSettings_Callback(hObject, eventdata, handles, 'GUI_Recovery_Settings.mat');
 
 % Create a job
-openLavaJobArray(job_name, file_list, bkg_fun, flip_char, config_file, model_file_yml, calibration_file_yml);
+openLavaJobArray(locomouse_cpp_cluster_root, job_name, file_list, bkg_fun, flip_char, cpp_config_file, model_file_yml, calibration_file_yml);
 
-function [] = openLavaJobArray(job_name, file_list, bkg_fun, flip_char, config_file, model_file, calibration_file, video_files, bkg_files, side_chars)
+function [] = openLavaJobArray(locomouse_cpp_cluster_root, job_name, file_list, bkg_fun, flip_char, config_file, model_file, calibration_file)
 
 % Generate a file with the videos
-[video_files, bkg_files, side_chars] = filesForOpenLavaJob(job_name, file_list, bkg_fun, flip_char);
+[video_files, bkg_files, side_chars] = filesForOpenLavaJob(locomouse_cpp_cluster_root, job_name, file_list, bkg_fun, flip_char);
 
-job_fid = fopen(sprintf('%s.job',job_name),'w');
+job_fid = fopen(fullfile(locomouse_cpp_cluster_root,sprintf('%s.job',job_name)),'w');
+
+if job_fid < 0 
+    error('Could not create .job file. Check writing permissions!');
+end
 
 fprintf(job_fid,'#BSUB -o %s.out\n',job_name);
 fprintf(job_fid,'#BSUB -e %s.err\n',job_name);
 fprintf(job_fid,'#!/bin/bash\n');
 fprintf(job_fid,'#echo $LSB_JOBINDEX\n');
-fprintf(job_fid,'file_name=$(sed "${LSB_JOBINDEX}q;d" %s)',video_files);
-fprintf(job_fid,'bkg_name=$(sed "${LSB_JOBINDEX}q;d" %s)', bkg_files);
-fprintf(job_fid,'side_char=$(sed "$(LSB_JOBINDEX}q;d" %s)',side_chars);
+fprintf(job_fid,'file_name=$(sed "${LSB_JOBINDEX}q;d" %s)\n',video_files);
+fprintf(job_fid,'bkg_name=$(sed "${LSB_JOBINDEX}q;d" %s)\n', bkg_files);
+fprintf(job_fid,'side_char=$(sed "${LSB_JOBINDEX}q;d" %s)\n',side_chars);
 fprintf(job_fid,'echo "$file_name"\n');
-fprintf(job_fid,'./LocoMouse %s ${file_name} ${bkg_name} %s %s ${side_char}',config_file,model_file,calibration_file);
+fprintf(job_fid,'%s %s ${file_name} ${bkg_name} %s %s ${side_char}\n',fullfile(locomouse_cpp_cluster_root,'LocoMouse'),config_file,model_file,calibration_file);
 
 
 %%% Printing files necessary for cluster job
-function [] = filesForOpenLavaJob(job_name, file_list, bkg_fun, char_flip)
+function [video_files, bkg_files, side_chars] = filesForOpenLavaJob(locomouse_cpp_cluster_root, job_name, file_list, bkg_fun, char_flip)
 %time = fix(clock);
-job_dir = fullfile('/mirror',job_name);
+job_dir = fullfile(locomouse_cpp_cluster_root,job_name);
 if ~exist(job_dir,'dir')
     mkdir(job_dir);
 end
 
-video_files = fullfile(job_dir,fprintf('%s_video_list',job_name));
-bkg_files = fullfile(job_dir,fprintf('%s_bkg_list',job_name));
-side_chars = fullfile(job_dir,fprintf('%s_side_list',job_name));
+video_files = fullfile(job_dir,sprintf('%s_video_list',job_name));
+bkg_files = fullfile(job_dir,sprintf('%s_bkg_list',job_name));
+side_chars = fullfile(job_dir,sprintf('%s_side_list',job_name));
 
 videos_fid = fopen(video_files,'w');
 bkg_fid = fopen(bkg_files,'w');
@@ -1139,19 +1143,21 @@ if any([videos_fid, bkg_fid, side_fid] < 0)
     error('Could not create the auxiliary files for the openlava job. Check writing permissions!');
 end
 
-cleanfid = onCleanup(@()(fclose([videos_fid bkg_fid side_fid])));
+cleanfid = onCleanup(@()(fclose(videos_fid)));
+cleanfid2 = onCleanup(@()(fclose(bkg_fid)));
+cleanfid3 = onCleanup(@()(fclose(side_fid)));
 
-for i_files = 1:length(file_list)
-    fprintf(videos_fid,file_list{i_files});
+for i_files = 1:size(file_list,1)
     
-    feval(bkg_fun,file_list{i_files});
-    fprintf(bkg_fid,bkg_file);
+    file_name = strtrim(file_list(i_files,:));
     
+    fprintf(videos_fid,[file_name '\n']);
+    fprintf(bkg_fid,[feval(bkg_fun,file_name) '\n']);
     % Compute side from file name:
     if length(char_flip) > 1
-        fprintf(side_fid,file_list{i_files}(end-4));
+        fprintf(side_fid,[file_name(end-4) '\n']);
     else
-        fprintf(side_fid,char_flip);
+        fprintf(side_fid,[char_flip '\n']);
     end
 end
 

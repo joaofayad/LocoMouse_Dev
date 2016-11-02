@@ -15,6 +15,6 @@ if ispc
     file_list = ls(string);
 else
     file_list = dir(string);
-    file_list = cell2mat({file_list(:).name}');
+    file_list = strvcat({file_list(:).name}');
 end
     
