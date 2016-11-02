@@ -495,7 +495,7 @@ if cpp
     overwrite_results = handles.checkbox_overwrite_results;
     export_figures = handles.checkbox_ExpFigures.Value;
     model = handles.model;
-    parfor i_files = 1:Nfiles
+    for i_files = 1:Nfiles
         file_name = char(strtrim(file_list{i_files}));
         successful_tracking(i_files) = track_MATLB_CPP(handles.data, model,model_file, calibration_file, root_path, file_name, output_fun, output_path, bkg_fun, overwrite_results, export_figures,[], cpp, cpp_config_file);
     end
@@ -552,7 +552,7 @@ try
             if ispc
                 cpp_exect = fullfile(root_path,'auxiliary_functions','cpp','Locomouse.exe');
                 calib = rmfield(data,{'vid','bkg','flip'});
-                [final_tracks_c, tracks_tail_c,data,debug] = locomouse_tracker_cpp_wrapper(data,root_path,model, calib, data.flip, model_file, calibration_file, cpp_exect, cpp_config_file);
+                [final_tracks_c, tracks_tail_c,data,debug] = locomouse_tracker_cpp_wrapper(data,root_path,model, calib, data.flip, model_file, calibration_file, cpp_exect, cpp_config_file, output_path);
             else
                 error('Only windows is supported so far. Compile the C++ code in the current platform and insert the call here.');
             end
