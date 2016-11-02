@@ -141,7 +141,13 @@ end
 
 function LocoMouse_closeRequestFcn(hObject, eventdata)
 handles = guidata(gcbo);
+try
 SaveSettings_Callback(hObject, eventdata, handles, 'GUI_Recovery_Settings.mat')
+catch error_close_gui
+    error_report = getReport(error_close_gui,'extended');
+    fprintf('Error closing GUI. Could not save settings.\n');
+    disp(error_report);
+end
 delete(gcbo)
 
 % --- Outputs from this function are returned to the command line.
@@ -238,7 +244,8 @@ if ischar(chosen_dir)% Valid dir selection.
     file_list = cell(handles.N_supported_files,1);
     isempty_file_type = true(1,handles.N_supported_files);
     
-    for i_f = 1:handles.N_supported_files
+    % Starts at 2 since 1 is all files:
+    for i_f = 2:handles.N_supported_files
         file_list{i_f} = getDataList(fullfile(chosen_dir,handles.supported_files{i_f}));
         isempty_file_type(i_f) = isempty(file_list{i_f});
     end
