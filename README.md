@@ -128,10 +128,7 @@ corridor in view: ca 55 cm
 We have, and it also works. However, errors occur when the algorithm tries to 
 assign identity to the potential paws when the paws move too far between 
 frames. One can change the algorithm to allow larger distances, but then you
-run into the problem that more than one paw is located within the search region.
-
-In any case, if you reduce the frame rate, you need to make sure the exposure
-time does not increase. Longer exposure times lead to motion blurr.
+run into the problem that more than one paw is located within the search region. In any case, if you reduce the frame rate, you need to make sure the exposure time does not increase. Longer exposure times lead to motion blurr.
 
 --|Acknowledgements|-- 
 This software was develop by Joao Fayad at the Neural Circuits and Behavior Lab
