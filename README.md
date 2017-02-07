@@ -124,8 +124,7 @@ objective: format is 4/3 inch, focal length 12 mm, iris range F2.0-22
 distance to mirror ca 60 cm
 corridor in view: ca 55 cm
 
-* Have you tried locoMouse also on data with lower sampling rates than 400Hz
-* (e.g. 200Hz frame rate) and does it function comparably?
+* Have you tried locoMouse also on data with lower sampling rates than 400Hz (e.g. 200Hz frame rate) and does it function comparably?
 We have, and it also works. However, errors occur when the algorithm tries to 
 assign identity to the potential paws when the paws move too far between 
 frames. One can change the algorithm to allow larger distances, but then you
