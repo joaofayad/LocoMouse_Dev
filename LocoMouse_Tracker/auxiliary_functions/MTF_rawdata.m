@@ -173,9 +173,9 @@ parfor i_images = 1:N_frames
         expected_im_size,...
         'contrast_template',...
         contrast_template);
-    % -----------------------------------------------------------------------------------------------
-    
-    %[I,Iaux] = readMouseImage(vid,i_images,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
+%     % -----------------------------------------------------------------------------------------------
+%     
+%      [I,Iaux] = readMouseImage(vid,i_images,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
     
     
     
