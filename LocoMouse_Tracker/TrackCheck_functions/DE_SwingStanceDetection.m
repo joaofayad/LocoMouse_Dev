@@ -12,9 +12,9 @@
 % Dennis Eckmeier, 2015
 % Based on correcmatfinal_wild_400_04_018_mutant.m by Carey lab
 
-function [SwiSta] = DE_SwingStanceDetection(labels)
+function [SwiSta] = DE_SwingStanceDetection(labels,total_frames)
 
-    [final_tracks, ~] = Convert_Label2Track(labels);
+    [final_tracks, ~] = Convert_Label2Track(labels,total_frames); % needs the total frame number now!
             
     frames=(1:size(final_tracks,3))';
     
@@ -29,5 +29,7 @@ function [SwiSta] = DE_SwingStanceDetection(labels)
         SwiSta.swing{n}  = frames(cell2mat(new_swings(:,n)));
         SwiSta.stance{n} = frames(cell2mat(new_stances(:,n)));
     end
+    
+     DE_PlotSwiStaOnTracks(final_tracks,SwiSta);
     
 end
