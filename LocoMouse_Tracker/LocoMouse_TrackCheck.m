@@ -2772,7 +2772,7 @@ function handles = addVideoFile(handles,path_name,file_name)
 
         if exist(lab_path,'file')
             % Attempt to load label file.
-            handles = loadtrack(handles, load(lab_path),true);
+            handles = loadtrack(handles, load(lab_path)); % JF: third argument true removed
         end
         userdata = get(handles.figure1,'userdata');
         % If for some reason the bkg path is not the same as the one loaded we
@@ -3715,7 +3715,15 @@ function handles = loadtrack(handles,loaded_data)
     end
     
     % Debug data for the manipulation of tracks:
-    userdata.data(video_id).DebugData = rmfield(loaded_data,{'data','final_tracks','tracks_tail'});
+    % JF: these fields don't exist on the data I was trying to load:
+    fields_to_remove = {'data','final_tracks','tracks_tail'};
+    userdata.data(video_id).DebugData = loaded_data;
+    
+    for i_frm = 1:length(fields_to_remove)
+        if isfield(userdata.data(video_id).DebugData,fields_to_remove{i_frm})
+           userdata.data(video_id).DebugData = rmfield(userdata.data(video_id).DebugData,fields_to_remove{i_frm});
+        end
+    end
     
 	userdata.data(video_id).flip = loaded_data.data.flip;
     userdata.data(video_id).scale = loaded_data.data.scale;
@@ -4244,4 +4252,3 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 end
-

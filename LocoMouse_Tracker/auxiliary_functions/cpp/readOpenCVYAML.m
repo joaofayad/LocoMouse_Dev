@@ -7,7 +7,7 @@ if fid < 0
     error('Could not read file!')
 end
 fid_safe = onCleanup(@()(fclose(fid)));
-
+S = [];
 loop = true;
 while (loop)
     
@@ -25,6 +25,8 @@ while (loop)
     %Check field type:
     if line(1) == '%'
         % Comment, ignore.
+    elseif strcmpi(line,'---')
+        % OpenCV 3.2 has this separating now, so skip as well
     else
         % Processing the value (Basically, const or Mat);
         field = strsplit(line,': ');
@@ -44,6 +46,11 @@ while (loop)
                         
             %Data lines:
             M = zeros(N_cols,N_rows); % C++ is row major!
+            
+            if strcmpi(data_type, 'u')
+                M = uint8(M);
+            end
+            
             counter = 1;
             mat_loop = true;
             

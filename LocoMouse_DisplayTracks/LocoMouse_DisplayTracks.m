@@ -7,7 +7,7 @@ function varargout = LocoMouse_DisplayTracks(varargin)
 % Author: Joao Renato Kavamoto Fayad (joaofayad@gmail.com) 
 % Last Modified: 13/11/2014
 
-% Last Modified by GUIDE v2.5 17-Nov-2014 18:38:05
+% Last Modified by GUIDE v2.5 12-Jan-2017 17:44:06
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -108,8 +108,9 @@ end
 [handles.N_point_tracks,~,~] = size(handles.point_tracks);
 
 % Displaying the first image to set the axis size:
-handles.image = imshow(read(handles.vid,1),'Parent',handles.axes1);
-set(handles.image,'CData',read(handles.vid,1));
+I = read(handles.vid,1); I = I(:,:,1);
+handles.image = imshow(I,'Parent',handles.axes1);
+set(handles.image,'CData',I);
 
 % Setting the axis size so that image is displayed with original size.
 % Setting the height so that the gui figure stretches accordingly:
@@ -492,7 +493,7 @@ end
 % Update image:
 % uint8(sc()*255) %%% FIXME: Add the image enhancement as an option as it
 % slows down playback.
-I = read(handles.vid,current_frame);
+I = read(handles.vid,current_frame); I = I(:,:,1);
 if get(handles.checkbox_background,'Value') == 0
     I = I-handles.bkg;
 end
@@ -576,7 +577,7 @@ function checkbox_background_Callback(hObject, eventdata, handles)
 
 % Hint: get(hObject,'Value') returns toggle state of checkbox_background
 cf = get(handles.figure1,'Userdata');
-I = read(handles.vid,cf{1});
+I = read(handles.vid,cf{1});I = I(:,:,1);
 if get(hObject,'Value') == 0
     I = I-handles.bkg;
 end
@@ -584,11 +585,12 @@ I = double(I); I = uint8(I/max(I(:))*255);
 set(handles.image,'CData',I);
 
 % --------------------------------------------------------------------
-function menu_export_Callback(hObject, eventdata, handles)
-% hObject    handle to menu_export (see GCBO)
+function menu_video_Callback(hObject, eventdata, handles)
+% hObject    handle to menu_video (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+function menu_export_Callback(hObject, eventdata, handles)
 c_update_system_state = onCleanup(@()(displayImage([],[],handles)));
 
 % Ask for file name and output directory:
@@ -612,29 +614,28 @@ if ~isequal(file_name,0) && ~isequal(path_name,0)
      % Disable GUI:
     set([handles.slider_frames handles.slider_speed handles.edit_frames handles.edit_speed handles.popupmenu_marker ...
         handles.popupmenu_tracks handles.pushbutton_color handles.checkbox_background handles.checkbox_occlusion ...
-        handles.menu_export handles.pushbutton_color ...
+        handles.menu_video handles.pushbutton_color ...
         handles.togglebutton_play get(handles.uitoolbar1,'Children')'],'Enable','off');
     % Enable GUI on end of execution:
     c_handles = onCleanup(@()(set([handles.slider_frames handles.slider_speed handles.edit_frames ... 
         handles.edit_speed handles.popupmenu_marker handles.popupmenu_tracks handles.pushbutton_color...
         handles.checkbox_background handles.checkbox_occlusion handles.edit_frames handles.slider_frames ...
-        handles.togglebutton_play handles.menu_export get(handles.uitoolbar1,'Children')'],'Enable','on')));
+        handles.togglebutton_play handles.menu_video get(handles.uitoolbar1,'Children')'],'Enable','on')));
     fig = watchon;
     c_pointer = onCleanup(@()(watchoff(fig)));
     
-    % Creating the video object:
-%     writerObj = VideoWriter(fullfile(path_name,file_name),'MPEG-4');
-%     writerObj.FrameRate = 30;
-    % writerObj.ColorChannels = 1;
-%     writerObj.Quality = 100;
-%     open(writerObj);
-%     c_video = onCleanup(@()(close(writerObj)));
+    %Creating the video object:
+    writerObj = VideoWriter(fullfile(path_name,file_name),'MPEG-4');
+    writerObj.FrameRate = 30;
+    writerObj.Quality = 100;
+    open(writerObj);
+    c_video = onCleanup(@()(close(writerObj)));
 
     % Play the video to entertain the user while the images are generated and
     % saved into the video object.
 %     c_image = onCleanup(@()(delete('temp_fig.png')));
     for i_images = 1:handles.N_frames
-        I = read(handles.vid,i_images); 
+        I = read(handles.vid,i_images);I = I(:,:,1); 
         if get(handles.checkbox_background,'Value') == 0
             I = I-handles.bkg;
         end
@@ -642,9 +643,9 @@ if ~isequal(file_name,0) && ~isequal(path_name,0)
         I = uint8(I/max(I(:))*255);
         set(handles.image,'CData',I);
         updateMarkers(handles,i_images);
-        export_fig(handles.axes1,sprintf('ladder_%03d.png',i_images),'-native');
+%         export_fig(handles.axes1,sprintf('ladder_%03d.png',i_images),'-native');
 %         writeVideo(writerObj, imread('temp_fig.png'));
-%         writeVideo(writerObj, getframe(handles.axes1));
+        writeVideo(writerObj, getframe(handles.axes1));
     end
 end
 guidata(hObject,handles);
