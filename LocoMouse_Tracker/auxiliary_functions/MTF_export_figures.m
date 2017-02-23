@@ -46,8 +46,8 @@ for i_pairs = 1:2
     xlabel('time [s]')
     ylabel('z position [px]')
     hold on
-    plot([1:N_images]*f2t,squeeze(final_tracks(3,pairs(i_pairs,1),:)),'-','Color',PointColors(pairs(i_pairs,1),:),'LineWidth',2);
-    plot([1:N_images]*f2t,squeeze(final_tracks(3,pairs(i_pairs,2),:)),'-','Color',PointColors(pairs(i_pairs,2),:),'LineWidth',2);
+    plot([1:N_images]*f2t,squeeze(final_tracks(4,pairs(i_pairs,1),:)),'-','Color',PointColors(pairs(i_pairs,1),:),'LineWidth',2);
+    plot([1:N_images]*f2t,squeeze(final_tracks(4,pairs(i_pairs,2),:)),'-','Color',PointColors(pairs(i_pairs,2),:),'LineWidth',2);
     legend(Legend(pairs(i_pairs,:)),'Location','NorthWest');
     switch i_pairs
         case 1
