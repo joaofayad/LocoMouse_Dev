@@ -162,7 +162,7 @@ end
 if ~exist('expected_im_size','var')
     expected_im_size = size(ind_warp_mapping);
 end
-Img = gpuArray(read(vid,frame_number));
+Img = read(vid,frame_number);
 
 % Checking for colour: sometimes the LocoMouse system wrongly outputs
 % colour video even though the camera is grayscale. This is potentially
