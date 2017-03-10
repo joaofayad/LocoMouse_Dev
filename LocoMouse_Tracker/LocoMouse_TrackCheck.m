@@ -3702,14 +3702,14 @@ function handles = loadtrack(handles,loaded_data)
     
     % Debug data for the manipulation of tracks:
     % JF: these fields don't exist on the data I was trying to load:
-    fields_to_remove = {'data','final_tracks','tracks_tail'};
-    userdata.data(video_id).DebugData = loaded_data;
-    
-    for i_frm = 1:length(fields_to_remove)
-        if isfield(userdata.data(video_id).DebugData,fields_to_remove{i_frm})
-           userdata.data(video_id).DebugData = rmfield(userdata.data(video_id).DebugData,fields_to_remove{i_frm});
-        end
-    end
+%     fields_to_remove = {'data','final_tracks','tracks_tail'};
+%     userdata.data(video_id).DebugData = loaded_data;
+%     
+%     for i_frm = 1:length(fields_to_remove)
+%         if isfield(userdata.data(video_id).DebugData,fields_to_remove{i_frm})
+%            userdata.data(video_id).DebugData = rmfield(userdata.data(video_id).DebugData,fields_to_remove{i_frm});
+%         end
+%     end
     
 	userdata.data(video_id).flip = loaded_data.data.flip;
     userdata.data(video_id).scale = loaded_data.data.scale;
