@@ -1119,6 +1119,16 @@ function [] = openLavaJobArray(locomouse_cpp_cluster_root, job_name, file_list, 
 
 job_name_no_ext = fullfile(locomouse_cpp_cluster_root,job_name,job_name);
 
+
+% If .err and .out files exist, delete them:
+if exist(sprintf('%s.out',job_name_no_ext),'file');
+    delete(sprintf('%s.out',job_name_no_ext));
+end
+
+if exist(sprintf('%s.err',job_name_no_ext),'file');
+    delete(sprintf('%s.err',job_name_no_ext));
+end
+
 job_fid = fopen(sprintf('%s.job',job_name_no_ext),'w');
 
 if job_fid < 0 
@@ -1161,9 +1171,11 @@ cleanfid2 = onCleanup(@()(fclose(bkg_fid)));
 cleanfid3 = onCleanup(@()(fclose(side_fid)));
 
 for i_files = 1:size(file_list,1)
-    
+    if ispc
     file_name = strtrim(file_list{i_files});
-    
+    elseif isunix
+        file_name = strtrim(file_list(i_files,:));
+    end
     fprintf(videos_fid,[file_name '\n']);
     fprintf(bkg_fid,[feval(bkg_fun,file_name) '\n']);
     % Compute side from file name:
