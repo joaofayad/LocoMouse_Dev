@@ -1,7 +1,5 @@
 
 function tracks = DE_FillHoles(tracks,MaxHoleSize)
-         
-    
 
     for tPoint = 1:size(tracks,2)
         for tCoord = 1:size(tracks,1)

@@ -41,13 +41,10 @@ function track = DE_FillNaNHoles(track,MaxHoleSize)
         EP_length = (EndIDX-StartIDX)+1;
         
         if EP_length-2 <= MaxHoleSize
-            if track(StartIDX) == track(EndIDX)
-                track(StartIDX:EndIDX) = ones(EP_length,1)*track(EndIDX);
-            else
-                track(StartIDX:EndIDX) = track(StartIDX):(track(EndIDX)-track(StartIDX))/(EndIDX-StartIDX):track(EndIDX); 
-            end
+            track(StartIDX:EndIDX) = inpaint_nans(track(StartIDX:EndIDX),[]);
         end
         
     end
-    
+
+
 end

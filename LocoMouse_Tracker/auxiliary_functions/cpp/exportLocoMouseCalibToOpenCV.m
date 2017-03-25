@@ -44,10 +44,16 @@ try
                     row_ind = convert_ColToRowMajor(calibration_struct.ind_warp_mapping,size(calibration_struct.inv_ind_warp_mapping));
                     writeMatrix(fid,'ind_warp_mapping',row_ind-1); %-1 because these are indices and must be converted to C/C++ style starting from 0.
                     
+                    row_ind = convert_ColToRowMajor(calibration_struct.ind_warp_mapping(:,end:-1:1),size(calibration_struct.inv_ind_warp_mapping));
+                    writeMatrix(fid,'ind_warp_mapping_flip',row_ind-1);
+                    
                 case 'inv_ind_warp_mapping'
                     % inv_ind_warp_mapping:
                     row_ind = convert_ColToRowMajor(calibration_struct.inv_ind_warp_mapping,size(calibration_struct.ind_warp_mapping));
                     writeMatrix(fid,'inv_ind_warp_mapping',row_ind-1);
+                    
+                    row_ind = convert_ColToRowMajor(calibration_struct.inv_ind_warp_mapping(:,end:-1:1),size(calibration_struct.ind_warp_mapping));
+                    writeMatrix(fid,'inv_ind_warp_mapping_flip',row_ind-1);
                     
                 case 'split_line'
                     % Write integer:

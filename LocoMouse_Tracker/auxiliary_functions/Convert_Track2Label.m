@@ -10,7 +10,11 @@ function [labels]= Convert_Track2Label(tracks,tracks_tail, labels)
         labels{1}{2}{1}(1:2,1,:,1) = tracks(1:2,5,:);
         labels{1}{2}{1}(1:2,1,:,2) = tracks(3:4,5,:);
                
+try
         labels{2}{1}{1}(1:2,:,:,1) = tracks_tail(1:2,:,:);
         labels{2}{1}{1}(3:4,:,:,1) = tracks_tail(3:4,:,:);        
+catch
+    disp('meh')
+end
 
 end

@@ -1,6 +1,6 @@
 %YAML:1.0
 #LocoMouse configuration file: Erroneous input will crash the program!
-mode: 2 # 0 - Overground/Ladder; 1 - Treadmill; 2 - HF;
+mode: 2 # 0 - Overground/Ladder; 1 - Treadmill; 2 - Head Fixed;
 #Data: x_pos, y_pos, max_distance, x_area_min, x_area_max, y_area_min, y_area_max.
 # Feature order is: FR paw,
 location_prior: !!opencv-matrix
@@ -12,6 +12,17 @@ location_prior: !!opencv-matrix
       0.9, 0.25, 0.3, 0.6, 1.0, 0.0, 0.6,
       0.5, 0.25, 0.3, 0.2, 0.85, 0.0, 0.7,
       1, 0.5, 0.2, 0, 1, 0, 1]
+use_provided_bounding_box: 0 # if true, bounding_box computation is skipped and user provided values are used for all frames. Usefull for head fixed setups.
+bounding_box_top: !!opencv-matrix
+   rows: 1
+   cols: 4
+   dt: i
+   data: [73, 0, 517, 70]
+bounding_box_bottom: !!opencv-matrix
+   rows: 1
+   cols: 4
+   dt: i
+   data: [73, 100, 517, 166] # y starting point is added to the split line defined by the calibration.
 # Alogrithm parameters: Don't change unless certain of what they do.
 #Spacing of the grid max pixel displacement, etc.
 conn_comp_connectivity: 8 #Connectivity for the Connected components algorithm.
@@ -30,7 +41,7 @@ alpha_vel: 0.1 #Relative term for the velocity costs on the match2nd tracking al
 alpha_vel_top: 100 #Same as above, for the top
 pairwise_occluded_cost: 0.01 #Cost for moving to and between occluded points on the match2nd algorithm.
 moving_average_window: 5 #Must be odd.
-transform_gray_values: false #
+transform_gray_values: 0 #
 gray_value_transformation: !!opencv-matrix
    rows: 1
    cols: 256

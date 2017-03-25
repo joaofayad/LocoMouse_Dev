@@ -39,15 +39,19 @@ set(fig1, 'Position', get(0,'Screensize')); % Maximize figure.
 
 % Z vs time for FR FL
 % Z vs time for HR HL
-pairs = [1 2;3 4];
+if size(final_tracks,1) == 4
+    pairs = [1 2;3 4];
+else
+	pairs = [1 2;1 3];
+end
 fig2 = figure();
 for i_pairs = 1:2
     subplot(2,1,i_pairs)
     xlabel('time [s]')
     ylabel('z position [px]')
     hold on
-    plot([1:N_images]*f2t,squeeze(final_tracks(3,pairs(i_pairs,1),:)),'-','Color',PointColors(pairs(i_pairs,1),:),'LineWidth',2);
-    plot([1:N_images]*f2t,squeeze(final_tracks(3,pairs(i_pairs,2),:)),'-','Color',PointColors(pairs(i_pairs,2),:),'LineWidth',2);
+    plot([1:N_images]*f2t,squeeze(final_tracks(pairs(2,2),pairs(i_pairs,1),:)),'-','Color',PointColors(pairs(i_pairs,1),:),'LineWidth',2);
+    plot([1:N_images]*f2t,squeeze(final_tracks(pairs(2,2),pairs(i_pairs,2),:)),'-','Color',PointColors(pairs(i_pairs,2),:),'LineWidth',2);
     legend(Legend(pairs(i_pairs,:)),'Location','NorthWest');
     switch i_pairs
         case 1

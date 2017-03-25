@@ -495,7 +495,7 @@ if cpp
     overwrite_results = handles.checkbox_overwrite_results;
     export_figures = handles.checkbox_ExpFigures.Value;
     model = handles.model;
-    parfor i_files = 1:Nfiles
+    for i_files = 1:Nfiles
         file_name = char(strtrim(file_list{i_files}));
         successful_tracking(i_files) = track_MATLB_CPP(data, model,model_file, calibration_file, root_path, file_name, output_fun, output_path, bkg_fun, overwrite_results, export_figures,[], cpp, cpp_config_file);
     end
@@ -724,7 +724,7 @@ try
     
 catch load_error
     fprintf('Error: Could not load %s with MATLAB.\n',full_file_path);
-    disp(getReport(load_error.message,'extended'));
+    disp(getReport(load_error,'extended'));
     beep;
 end
 % Setting the old or new string according to how the computations went:

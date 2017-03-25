@@ -10,6 +10,15 @@ location_prior: !!opencv-matrix
       1, 0, 0.6, 0, 1, 0, 1,
       0, 0, 0.6, 0, 1, 0, 1,
       1, 0.5, 0.2, 0, 1, 0, 1]
+use_provided_bounding_box: 0
+bounding_box_top: !!opencv-matrix
+   rows: 1
+   cols: 4
+   data: [0, 0, 100, 100]
+bounding_box_bottom: !!opencv-matrix
+   rows: 1
+   cols: 4
+   data: [0, 0, 100, 100]
 # Alogrithm parameters: Don't change unless certain of what they do.
 #Spacing of the grid max pixel displacement, etc.
 conn_comp_connectivity: 8 #Connectivity for the Connected components algorithm.
@@ -28,7 +37,7 @@ alpha_vel: 0.1 #Relative term for the velocity costs on the match2nd tracking al
 alpha_vel_top: 100 #Same as above, for the top
 pairwise_occluded_cost: 0.01 #Cost for moving to and between occluded points on the match2nd algorithm.
 moving_average_window: 5 #Must be odd.
-transform_gray_values: false #
+transform_gray_values: 0 #
 gray_value_transformation: !!opencv-matrix
    rows: 1
    cols: 256

@@ -22,7 +22,7 @@ function varargout = LocoMouse_TrackCheck(varargin)
 
 % Edit the above text to modify the response to help LocoMouse_TrackCheck
 
-% Last Modified by GUIDE v2.5 28-Jul-2016 10:19:32
+% Last Modified by GUIDE v2.5 14-Sep-2016 09:59:18
 
     % Begin initialization code - DO NOT EDIT
     gui_Singleton = 1;
@@ -210,12 +210,10 @@ function LocoMouse_TrackCheck_OpeningFcn(hObject, ~, handles, varargin)
     % Initializing the split line:
     handles.split_line = line(0,0,'Linestyle','-','Linewidth',1,'Visible','off','Color','w');
 
-    % Initializing the color pushbutton:
-    set(handles.pushbutton_color,'BackgroundColor',get(userdata.plot_handles.track{1}{1}{1}(1),'Color'));
 
     % Initializing the box size:
-    set([handles.edit_h_bottom handles.edit_w_bottom handles.edit_h_side handles.edit_w_side],{'String'},...
-        cellfun(@(x)(num2str(x)),num2cell(userdata.labels{1}{1}(1).box_size(:)),'un',0));
+%     set([handles.edit_h_bottom handles.edit_w_bottom handles.edit_h_side handles.edit_w_side],{'String'},...
+%         cellfun(@(x)(num2str(x)),num2cell(userdata.labels{1}{1}(1).box_size(:)),'un',0));
 
     % Initializing the slider:
     set(handles.slider_frame,'Min',1);
@@ -309,13 +307,17 @@ function handles = resetGUI(handles)
             try
             X_data = [1 max(userdata.data(video_id).LimitedWindow_X(:,2)-userdata.data(video_id).LimitedWindow_X(:,1))];
             catch t_err
-                disp();
+                disp('Limited View Window Error');
             end
         else
             X_data = [1 userdata.data(video_id).vid.Width];
         end
         set(handles.image,'Xdata',X_data,'Ydata',[1 userdata.data(video_id).vid.Height]);
-
+        totalFrames = int16(userdata.data(video_id).vid.Duration * userdata.data(video_id).vid.FrameRate);
+        if userdata.data(video_id).current_frame <1 || userdata.data(video_id).current_frame > totalFrames
+            userdata.data(video_id).current_frame = 1;
+        end
+        
         % Updating the vertical flip:
         set(handles.checkbox_vertical_flip,'Value',userdata.data(video_id).flip);
 
@@ -323,11 +325,11 @@ function handles = resetGUI(handles)
         if isnan(userdata.data(video_id).split_line)
             new_split_line = round(userdata.data(video_id).vid.Height/2);
             userdata.data(video_id).split_line = new_split_line;
-            set(handles.edit_split_line,'String',num2str(new_split_line));
             tWidth = userdata.data(video_id).vid.Width;
             set(handles.split_line ,'Xdata',[1 tWidth],'Ydata',[new_split_line new_split_line],'Visible','on');
         else
             if  userdata.data(video_id).UseLimitedWindow && ~isempty(userdata.data(video_id).LimitedWindow_X)
+                
                 tWidth = diff(userdata.data(video_id).LimitedWindow_X(userdata.data(video_id).current_frame,:));
             else
                 tWidth = userdata.data(video_id).vid.Width;
@@ -433,45 +435,14 @@ function changeGUIActiveState(handles)
         handles.edit_speed ...
         handles.edit_frame_step ...
         handles.edit_start_frame ...
-        handles.edit_i_bottom...
-        handles.edit_i_side ...
-        handles.edit_j_bottom ...
-        handles.edit_j_side ...
         handles.togglebutton_play ...
-        handles.pushbutton_i_bottom_add ...
-        handles.pushbutton_i_bottom_sub...
-        handles.pushbutton_i_split_line_add ...
-        handles.pushbutton_i_bottom_sub...
-        handles.pushbutton_i_side_add...
-        handles.pushbutton_i_side_sub...
-        handles.pushbutton_j_bottom_add...
-        handles.pushbutton_j_bottom_sub...
-        handles.pushbutton_j_side_add...
-        handles.pushbutton_j_side_sub...
         handles.checkbox_display_all_tracks...
         handles.checkbox_vertical_flip...
         handles.checkbox_vertical_flip...
-        handles.popupmenu_visible_bottom...
-        handles.popupmenu_visible_side...
         handles.pushbutton_remove...
         handles.pushbutton_clear_FileList...
         handles.listbox_files...
-        handles.edit_split_line...
-        handles.pushbutton_i_split_line_sub ...
         handles.checkbox_display_split_line...
-        handles.pushbutton_color_split_line...
-        handles.pushbutton_w_bottom_add...
-        handles.pushbutton_w_bottom_sub...
-        handles.pushbutton_h_bottom_add...
-        handles.pushbutton_h_bottom_sub...
-        handles.pushbutton_w_side_add...
-        handles.pushbutton_w_side_sub...
-        handles.pushbutton_h_side_add...
-        handles.pushbutton_h_side_sub...
-        handles.edit_h_bottom...
-        handles.edit_h_side...
-        handles.edit_w_bottom...
-        handles.edit_w_side...
         handles.pushbutton_add_distortion_correction...
         handles.pushbutton_add_background];
 
@@ -484,13 +455,7 @@ function changeGUIActiveState(handles)
             PH = cat(2,userdata.plot_handles.track{:});PH = cat(2,PH{:});
             PH = cat(3,cell2mat(PH));
             set([PH(:);handles.split_line],'Visible','off');
-            % Setting the visibility to off on popups:
-            set([handles.popupmenu_visible_bottom ...
-                handles.popupmenu_visible_side],'Value',1);
-            % Setting the edits to NaN:
-            set([handles.edit_i_side handles.edit_i_bottom ...
-                handles.edit_j_side handles.edit_j_bottom ...
-                handles.edit_split_line],'String','NaN');
+
             % Setting frame stuff to 1:
             set([handles.edit_frame handles.edit_frame_step ...
                 handles.edit_frame_step],'String','1');
@@ -532,7 +497,9 @@ function data = initializeUserDataStructure(userdata,vid)
         'Good_Epochs',[], ...
         'BadMovie', false, ...
         'DataFile','',...
-        'DebugData',[]);
+        'DebugData',[], ...
+        'track_original',true,...
+        'timer',[]);
     clear empty_track empty_visibility
 
     % If image correction data was loaded, enable the image correction
@@ -547,7 +514,7 @@ function data = initializeUserDataStructure(userdata,vid)
     end
 end
 
-%% CORRECTING track
+%% CORRECTING tracks
 % 'Show LocoMouse track'
 function checkbox_Show_LM_Track_Callback(hObject, eventdata, handles)
 % hObject    handle to checkbox_Show_LM_Track (see GCBO)
@@ -842,6 +809,40 @@ function update_epochs(varargin)
         
 end
 
+% REMOVE TRACKS FROM EPOCH
+% --- Executes on button press in pushbutton_EpochRemoveTracks.
+function pushbutton_EpochRemoveTracks_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton_EpochRemoveTracks (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+	[userdata,video_id,~] = getGUIStatus(handles);
+	totalFrames = int16(userdata.data(video_id).vid.Duration * userdata.data(video_id).vid.FrameRate);
+     
+    % Choosing frames to delete:
+    cE_frames = userdata.data(video_id).Good_Epochs(:,handles.popupmenu_MovieEpochs.Value);
+    cE_frames = [cE_frames{1}(1):cE_frames{1}(2)];
+    
+    % overwriting LM_tracks with NaNs   
+    [tracks, tracks_tail] = Convert_Label2Track(userdata.data(video_id).LM_track,totalFrames);
+    tracks(:,:,cE_frames) = nan(size(tracks,1),size(tracks,2),length(cE_frames));
+    tracks_tail(:,:,cE_frames) = nan(size(tracks_tail,1),size(tracks_tail,2),length(cE_frames));    
+    [empty_labels,~] = initializeEmptytrackVisibility(userdata, totalFrames);
+    [userdata.data(video_id).LM_track]= Convert_Track2Label(tracks,tracks_tail, empty_labels);
+    
+    % overwriting tracks with NaNs
+    [tracks, tracks_tail] = Convert_Label2Track(userdata.data(video_id).track,totalFrames);
+    tracks(:,:,cE_frames) = nan(size(tracks,1),size(tracks,2),length(cE_frames));
+    tracks_tail(:,:,cE_frames) = nan(size(tracks_tail,1),size(tracks_tail,2),length(cE_frames));    
+    [empty_labels,~] = initializeEmptytrackVisibility(userdata, totalFrames);
+    [userdata.data(video_id).track]= Convert_Track2Label(tracks,tracks_tail, empty_labels);
+    
+	set(handles.figure1,'UserData',userdata);
+    displayImage([],[],handles);
+    guidata(handles.figure1,handles);
+    
+end
+
 function handles = toggle_Epoch_Panel(handles, toggle, varargin)
     % gets handles, toggle 
     
@@ -931,6 +932,7 @@ function togglebutton_PlayEpochVid_Callback(hObject, eventdata, handles)
     
 end
 
+%% AUTOMATED TRACKING FIX FUNCTIONS
 
 % DETECT SWING AND STANCE
 % --- Executes on button press in pushbutton_DetectSwingAndStance.
@@ -940,7 +942,8 @@ function pushbutton_DetectSwingAndStance_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     [userdata,video_id,~] = getGUIStatus(handles);
     image_size = [userdata.data(video_id).vid.Height, userdata.data(video_id).vid.Width];
-    SwiSta = DE_SwingStanceDetection(userdata.data(video_id).track);
+	total_frames = userdata.data(video_id).vid.Duration * userdata.data(video_id).vid.FrameRate;
+    SwiSta = DE_SwingStanceDetection(userdata.data(video_id).LM_track,total_frames);
     
     userdata.data(video_id).SwiSta = SwiSta;
 	set(handles.figure1,'UserData',userdata);
@@ -957,9 +960,10 @@ function pushbutton_FillHoles_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
     [userdata,video_id,~] = getGUIStatus(handles);
-    disp('Reminder: pushbutton_FillHoles_Callback currently takes LM_track, not track!')
-    [tracks, tracks_tail] = Convert_Label2Track(userdata.data(video_id).LM_track);
-    % [tracks, tracks_tail] = Convert_Label2Track(userdata.data(video_id).track);
+     disp('Reminder: pushbutton_FillHoles_Callback works on the labels, not the track!')
+    total_frames = userdata.data(video_id).vid.Duration * userdata.data(video_id).vid.FrameRate;
+    %     [tracks, tracks_tail] = Convert_Label2Track(userdata.data(video_id).LM_track,total_frames);
+    [tracks, tracks_tail] = Convert_Label2Track(userdata.data(video_id).track,total_frames);
     MaxHoleSize = round(0.1250 * userdata.data(video_id).vid.FrameRate);
     tracks = DE_FillHoles(tracks,MaxHoleSize);
     
@@ -980,8 +984,9 @@ function pushbutton_Smooth_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
     [userdata,video_id,~] = getGUIStatus(handles);
-    % [tracks, tracks_tail] = Convert_Label2Track(userdata.data(video_id).LM_track);
-    [tracks, tracks_tail] = Convert_Label2Track(userdata.data(video_id).track);
+    total_frames = userdata.data(video_id).vid.Duration * userdata.data(video_id).vid.FrameRate;
+    % [tracks, tracks_tail] = Convert_Label2Track(userdata.data(video_id).LM_track,total_frames);
+    [tracks, tracks_tail] = Convert_Label2Track(userdata.data(video_id).LM_track,total_frames);
     MaxHoleSize = round(0.1250 * userdata.data(video_id).vid.FrameRate);
     tracks = DE_SmoothTracks(tracks,userdata.data(video_id).vid.FrameRate,false,MaxHoleSize);
     
@@ -1001,15 +1006,78 @@ function pushbutton_FlipLR_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
     [userdata,video_id,~] = getGUIStatus(handles);
-    userdata.data(video_id).track{1}{1} = userdata.data(video_id).track{1}{1}([3 4 1 2]);
-    userdata.data(video_id).LM_track{1}{1} = userdata.data(video_id).LM_track{1}{1}([3 4 1 2]);
-	set(handles.figure1,'UserData',userdata);
-    displayImage([],[],handles);
-    guidata(handles.figure1,handles);
+    
+    data_s = load(userdata.data(video_id).DataFile);
+    im_width_c = size(data_s.data.ind_warp_mapping,2);
+    im_width = size(data_s.data.inv_ind_warp_mapping,2);
+    
+    
+    data_s.data.flip = ~data_s.data.flip; % correct flip flag
+        
+    % turn around x values
+    data_s.data.bodymasscenter(1,:) = abs(data_s.data.bodymasscenter(1,:) - im_width) +1;
+    data_s.bounding_box(1,:) = abs(data_s.bounding_box(1,:) - im_width_c) +1;    
+    
+    for i = 1:size(data_s.debug.tracks_bottom,1)
+        for ii = 1:size(data_s.debug.tracks_bottom,2)
+            data_s.debug.tracks_bottom{i,ii}(1,:) = abs(data_s.debug.tracks_bottom{i,ii}(1,:) - im_width_c)+1;
+        end
+    end
+    for i = 1:size(data_s.debug.tracks_top,1)
+        for ii = 1:size(data_s.debug.tracks_top,2)
+            data_s.debug.tracks_top{i,ii}(1,:) = abs(data_s.debug.tracks_top{i,ii}(1,:) - im_width_c)+1;
+        end
+    end
+    
+    data_s.final_tracks([1 3],:) = abs(data_s.final_tracks([1 3],:) - im_width)+1;
+    data_s.final_tracks_c([1 3],:) = abs(data_s.final_tracks_c([1 3],:) - im_width_c)+1;
+    data_s.tracks_tail([1 3],:) = abs(data_s.tracks_tail([1 3],:) - im_width)+1;
+    data_s.tracks_tail_c([1 3],:) = abs(data_s.tracks_tail_c([1 3],:) - im_width_c)+1;
+    
+    % reassigning paw identities
+    data_s.final_tracks = data_s.final_tracks(:,[3 4 1 2 5],:);
+    data_s.final_tracks_c = data_s.final_tracks_c(:,[3 4 1 2 5],:);
+    
+    % storing the files
+    fi_names = fieldnames(data_s);
+    save_str = 'save(userdata.data(video_id).DataFile';
+    for fi_i = 1:size(fi_names,1)
+        eval([char(fi_names(fi_i)),' = data_s.',char(fi_names(fi_i)),';'])
+        save_str = [save_str,', ''',char(fi_names(fi_i)),''''];
+    end
+    eval([save_str,',''-append'');'])
+    
+    % re-loading data file
+    listbox_files_Callback(hObject, eventdata, handles);
+    
 end
 
 
 % RE-TRACKING
+
+% Toggle retrack mode.
+% --- Executes on button press in togglebutton_RetrackMode.
+function togglebutton_RetrackMode_Callback(hObject, eventdata, handles)
+% hObject    handle to togglebutton_RetrackMode (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of togglebutton_RetrackMode
+
+    if handles.togglebutton_RetrackMode.Value
+        t_string = 'Retracking';
+        t_col = [1 0 0];
+    else
+        t_string = 'Not Retracking';
+        t_col = [0.94 0.94 0.94];            
+    end
+    set(handles.togglebutton_RetrackMode, ... 
+        'String',t_string, ...
+        'BackgroundColor',t_col);
+    
+end
+
+
 function pushbutton_ReTrack_Callback(hObject, eventdata, handles)
 
 % hObject    handle to pushbutton_ReTrack (see GCBO)
@@ -1018,8 +1086,8 @@ function pushbutton_ReTrack_Callback(hObject, eventdata, handles)
 
     [userdata,video_id,~] = getGUIStatus(handles);
     DataFile = userdata.data(video_id).DataFile;
-    
-    [tracks_corrected, tracks_tail_corrected]= Convert_Label2Track(userdata.data(video_id).track);
+    totalFrames = int16(userdata.data(video_id).vid.Duration * userdata.data(video_id).vid.FrameRate);
+    [tracks_corrected, ~]= Convert_Label2Track(userdata.data(video_id).track,totalFrames);
 
     % variables used by MTF_BottomView
         % Model file:
@@ -1041,11 +1109,12 @@ function pushbutton_ReTrack_Callback(hObject, eventdata, handles)
     N_pointlike_tracks = sum(N_features_per_point_track);
 
     % Flip'n'Warp
-    %%% FIXME: Hacked to only do the bottom view tracks for the paws so far:
-    vis_paw = cell2mat(userdata.data(video_id).visibility{1}{1}(:));
-    vis_paw = vis_paw(:,:,1);
+    %%% FIXME: Hacked to only do the bottom view tracks so far:
+    vis_point = [cell2mat(userdata.data(video_id).visibility{1}{1}(:)); cell2mat(userdata.data(video_id).visibility{1}{2}(:))];
+    vis_point_b = vis_point(:,:,1);
+    vis_point_s = vis_point(:,:,2);
     
-    corrected_frames_ind = find(any(vis_paw == 2,1));
+    corrected_frames_ind = find(any(vis_point_b == 2 | vis_point_s == 2,1));
     N_corrected_frames = length(corrected_frames_ind);
     
     if N_corrected_frames == 0
@@ -1059,46 +1128,42 @@ function pushbutton_ReTrack_Callback(hObject, eventdata, handles)
         tracksc_i = tracks_corrected(1:2,:,cframes_i);
         
         % Convert tracks to corrected view:
-        tracksc_i = warpPointCoordinates(tracksc_i([2 1],:)',...
-            userdata.data.inv_ind_warp_mapping,...
-            size(userdata.data.ind_warp_mapping),...
-            false); % No pre and post flipping
+        tracksc_i = warpPointCoordinates(tracksc_i([2 1],:)',userdata.data(video_id).inv_ind_warp_mapping,size(userdata.data(video_id).ind_warp_mapping),false); % No pre and post flipping
         tracksc_i = tracksc_i(:,[2 1])';
         
         % Handling flipping outside of the warp. 
         % FIXME: The warp should have a pre and post flip boolean.
         if userdata.data(video_id).flip
-            tracksc_i(1,:) = size(userdata.data.inv_ind_warp_mapping,2) - tracksc_i(1,:) + 1; 
+            tracksc_i(1,:) = size(userdata.data(video_id).inv_ind_warp_mapping,2) - tracksc_i(1,:) + 1; 
             tracksc_i = tracksc_i(:,[3 4 1 2 5],:);
         end
         tracksc_i(isnan(tracksc_i(:))) = -1; % FIXME: What if the track really is missing?
         
         correct_structure(i_frames).frame = corrected_frames_ind(i_frames);
-        correct_structure(i_frames).tracks = tracksc_i(:,1:4);
+        correct_structure(i_frames).tracks = tracksc_i;
     end
     
     [tracks_corrected, userdata.data(video_id).DebugData] = retrackMatch2nd(correct_structure, userdata.data(video_id).DebugData, userdata.data(video_id).ind_warp_mapping,userdata.data(video_id).flip);
-    
-    % Fix the tracking matrices:
+            % Fix the tracking matrices:
     % - Check which tracks changed and which ones are kept.
     % - Update Unary and Pairwise
     % - Run match2nd with ALL THE PERMUTATIONS!
-        
-    % Updating the track structure:
-     for i_tracks = 1:4 % FIXME: Paw only
-        % Copying the new tracks:
-        userdata.data(video_id).LM_track{1}{1}{i_tracks} = cat(4,tracks_corrected(1:2,i_tracks,:),tracks_corrected(3:4,i_tracks,:));
-        
-        % Erasing the manual labels:
-        userdata.data(video_id).track{1}{1}{i_tracks} = nan(size(userdata.data(video_id).track{1}{1}{i_tracks}));
-        
-        % Erasing the manual visibility:
-        userdata.data(video_id).visibility{1}{1}{i_tracks} = ones(size(userdata.data(video_id).visibility{1}{1}{i_tracks}));
-        
-     end
-     
-    % Saving Changes: %%% FIXME: If the Unary and Pairwise matrices are not stored, the tracks can only be corrected once! 
-    set(handles.figure1,'UserData',userdata);
+    
+%     [DE] RETRACKING MODE if the retracking broke, delete current change.
+    if isempty(tracks_corrected)
+        [trc,trta]  = Convert_Label2Track(userdata.data(video_id).track);
+        trc(:,:,userdata.data(video_id).current_frame) = NaN;
+        trta(:,:,userdata.data(video_id).current_frame) = NaN;
+        empty_labels = initializeEmptytrackVisibility(userdata, size(trc,3));
+        userdata.data(video_id).track = Convert_Track2Label(trc,trta,empty_labels,totalFrames);
+    else
+        for i_tracks = 1:5 % FIXME: Paw only
+        % >> [DE] 
+        userdata.data(video_id).track{1}{1}{i_tracks} = cat(4,tracks_corrected(1:2,i_tracks,:),tracks_corrected(3:4,i_tracks,:));
+        % [DE] <<
+        end
+    end
+	set(handles.figure1,'UserData',userdata);
     displayImage([],[],handles);
     guidata(handles.figure1,handles);
 end
@@ -1123,134 +1188,170 @@ function [track_bottom, D] = retrackMatch2nd(correct_structure, D, ind_warp_mapp
 % Pairwise: The new pairwise potentials.
 
 
-New_score = 100;
-alpha_vel = 1E-1;
-Nong = size(D.debug.Occlusion_Grid_Bottom,2);
-N_frames = size(D.final_tracks_c,3);
-
-% Copying old data:
-Unary = D.debug.Unary;
-Pairwise = D.debug.Pairwise;
-tracks_bottom = D.debug.tracks_bottom;
-
-for i_changes = 1:length(correct_structure)
+    New_score = 100;
+    alpha_vel = 1E-1;
     
-    i_frame = correct_structure(i_changes).frame;
-    tracks = correct_structure(i_changes).tracks;
+    % FIXME [DE] This change should be an update to the data file
+    if ~isfield(D.debug,'Occlusion_Grid_Bottom') 
+        if isfield(D,'OcclusionGrid')
+            D.debug.Occlusion_Grid_Bottom = D.OcclusionGrid;
+        else
+            error('unknown debuger version: occlusion grid was not found.')
+        end
+    end
     
-    % Paw tracks (for now just them):
-    candidates_paw = NaN(3,4);
-    candidates_paw_joint = NaN(4,4);
-    for i_paw = 1:4
-        if any(tracks(:,i_paw) < 0)
+    Nong = size(D.debug.Occlusion_Grid_Bottom,2);
+    N_frames = size(D.final_tracks_c,3);
+
+    % Copying old data:
+    Unary = D.debug.Unary;
+    Pairwise = D.debug.Pairwise;
+    tracks_bottom = D.debug.tracks_bottom;
+
+    for i_changes = 1:length(correct_structure)
+
+        i_frame = correct_structure(i_changes).frame;
+        tracks = correct_structure(i_changes).tracks;
+
+        % Paw tracks (for now just them):
+        candidates_paw = NaN(3,4);
+        candidates_paw_joint = NaN(4,4);
+        for i_paw = 1:4
+            if any(tracks(:,i_paw) < 0)
+                % FIXME: Implement remain and how to edit/not edit the pairwise
+                % matrices.
+                candidates_paw(1:2,i_paw) = D.final_tracks_c(1:2,i_paw,i_frame);
+                candidates_paw_joint(1:2,i_paw) = D.final_tracks_c(1:2,i_paw);
+            else
+                % Candidates and unary:
+                candidates_paw(1:2,i_paw) = tracks(:,i_paw);
+                candidates_paw_joint(1:2,i_paw) = tracks(:,i_paw);
+            end
+            candidates_paw(3,i_paw) = New_score;
+            candidates_paw_joint(4,i_paw) = New_score;
+        end
+        Unary{1,i_frame} = cat(1,New_score*eye(4),zeros(Nong,4));
+        tracks_bottom{1,i_frame} = candidates_paw;
+        
+        % [DE] ------ Repeat for the snout
+        candidates_snout = NaN(3,1);
+        candidates_snout_joint = NaN(4,1);
+        
+        if any(tracks(:,5) < 0)
             % FIXME: Implement remain and how to edit/not edit the pairwise
             % matrices.
-            candidates_paw(1:2,i_paw) = D.final_tracks_c(1:2,i_paw,i_frame);
-            candidates_paw_joint(1:2,i_paw) = D.final_tracks_c(1:2,i_paw);
+            candidates_snout(1:2,1) = D.final_tracks_c(1:2,5,i_frame);
+            candidates_snout_joint(1:2,1) = D.final_tracks_c(1:2,5);
         else
             % Candidates and unary:
-            candidates_paw(1:2,i_paw) = tracks(:,i_paw);
-            candidates_paw_joint(1:2,i_paw) = tracks(:,i_paw);
+            candidates_snout(1:2,1) = tracks(:,5);
+            candidates_snout_joint(1:2,1) = tracks(:,5);
         end
-        candidates_paw(3,i_paw) = New_score;
-        candidates_paw_joint(4,i_paw) = New_score;
-    end
-    Unary{1,i_frame} = cat(1,New_score*eye(4),zeros(Nong,4));
-    tracks_bottom{1,i_frame} = candidates_paw;
-    
-    % Pairwise:
-    % Compute the pairwise matrix from the points (i_frames < N_frames -1)
-    OGi = bsxfun(@minus,D.debug.bounding_box(1:2,i_frame),D.debug.Occlusion_Grid_Bottom);
-    if (i_frame < N_frames - 1)
-        Pairwise{1, i_frame} = computePairwiseCost(tracks_bottom{1,i_frame}(1:2,:),tracks_bottom{1,i_frame+1}(1:2,:),OGi,abs(D.debug.xvel(i_frame))+D.debug.occluded_distance,alpha_vel);
-    end
-    
-    % Compute the pairwise matrix to the point (i_frames > 1)
-    if (i_frame > 1)
-        Pairwise{1, i_frame-1} = computePairwiseCost(tracks_bottom{1,i_frame-1}(1:2,:),tracks_bottom{1,i_frame}(1:2,:),OGi,abs(D.debug.xvel(i_frame))+D.debug.occluded_distance,alpha_vel);
-        % Breaking links between occluded points to make sure only the
-        % manually labelled points are reachable:
-%         D.debug.Pairwise{1,i_frame-1}(5:end,size(D.debug.tracks_bottom{1,i_frame-1},2)+1:end) = 0;
-        Pairwise{1,i_frame-1}(5:end,:) = 0;
-    end
-    
-    %%% FIXME: Make sure all points are connected to different candidates
-    %%% on the previous frame. If not the program will crash.
-end
-% Re-run match2nd with all the permutations.
-M_new =  match2nd(Unary(1,:), Pairwise(1,:), [],Nong, 0);
-
-valid_tracks = all(M_new>0,2);
-
-if ~all(valid_tracks)
-    warning('Constraints do not result in valid trajectories. Please edit a frame closer to the previously edited frame: NUM');
-else
-    % Get new tracks: % FIXME: This definitely needs to be modular!
-    N_points = 4;
-    final_tracks_c_new = NaN(2,5,N_frames);
-    
-    
-    for i_features = 1:N_points
-        if i_features < 5
-            points = 1;
-        else
-            points = 2;
-        end
+        candidates_snout(3,1) = New_score;
+        candidates_snout_joint(4,1) = New_score;
         
-        %     if ~valid_tracks(i_features)
-        %         warning('Could not find a valid trajectory for track %d. Rejecting changes. Try editing a smaller segment.',i_features);
-        %
-        %         % Adding the candidate that was previously chosen to the new
-        %         % candidate list, if any:
-        %         for i_changes = 1:length(correct_structure)
-        %             i_frame = correct_structure(i_changes).frame;
-        %
-        %             % Copying old tracks:
-        %             final_tracks_c_new(1:2,i_features,i_frame) = D.final_tracks_c(1:2,i_features,i_frame);
-        %
-        %             if D.debug.M(i_features,i_frame) <= size(D.debug.tracks_bottom{1,i_frame},2)
-        %                 % Replace manual candidate for the previously existing
-        %                 % candidate:
-        %                 tracks_bottom{1,i_frame}(:,i_features) = D.debug.tracks_bottom{1,i_frame}(:,D.debug.M(i_features,i_frame));
-        %                 M_new(i_features,i_frame) = i_features;
-        %
-        %             else
-        %                 % Remove the candidate:
-        %                 tracks_bottom{1,i_frame}(:,i_features) = [];
-        %                 M_new(i_features,i_frame) = size(tracks_bottom{1,i_frame},2)+1; % I don't think which ONG matters.
-        %
-        %             end
-        %
-        %         end
-        %
-        %         continue;
-        %     end
+        Unary{2,i_frame} = cat(1,New_score,zeros(Nong,1));
+        tracks_bottom{2,i_frame} = candidates_snout;
         
-        for i_frames = 1:N_frames
-            if M_new(i_features,i_frames) <= size(tracks_bottom{points,i_frames},2)
-                final_tracks_c_new(1:2,i_features,i_frames) = tracks_bottom{points,i_frames}(1:2,M_new(i_features,i_frames));
+        % ------ [DE]
+
+        % Pairwise:
+        for tp_i = 1:2
+            % Compute the pairwise matrix from the points (i_frames < N_frames -1)
+            OGi = bsxfun(@minus,D.debug.bounding_box(1:2,i_frame),D.debug.Occlusion_Grid_Bottom);
+            if (i_frame < N_frames - 1)
+                Pairwise{tp_i, i_frame} = computePairwiseCost(tracks_bottom{tp_i,i_frame}(1:2,:),tracks_bottom{tp_i,i_frame+1}(1:2,:),OGi,abs(D.debug.xvel(i_frame))+D.debug.occluded_distance,alpha_vel);
+            end
+
+            % Compute the pairwise matrix to the point (i_frames > 1)
+            if (i_frame > 1)
+                Pairwise{tp_i, i_frame-1} = computePairwiseCost(tracks_bottom{tp_i,i_frame-1}(1:2,:),tracks_bottom{tp_i,i_frame}(1:2,:),OGi,abs(D.debug.xvel(i_frame))+D.debug.occluded_distance,alpha_vel);
+                % Breaking links between occluded points to make sure only the
+                % manually labelled points are reachable:
+        %         D.debug.Pairwise{1,i_frame-1}(5:end,size(D.debug.tracks_bottom{1,i_frame-1},2)+1:end) = 0;
+                Pairwise{tp_i,i_frame-1}(5:end,:) = 0;
             end
         end
-        
+
+        %%% FIXME: Make sure all points are connected to different candidates
+        %%% on the previous frame. If not the program will crash.
     end
     
-    % Side view for now unchanged:
-    D.final_tracks_c = cat(1,final_tracks_c_new,D.final_tracks_c(3,:,:));
-    %final_tracks_c_new(:,5,:) = final_tracks_c(:,5,:); %%% FIXME: No snout yet!
+    final_tracks_c_new = NaN(2,5,N_frames);
+    np{1}=[1:4]; np{2}=[1];
+    npi{1}=[1:4]; npi{2}=[5];
+    for tp_i = 1:2
+    % Re-run match2nd with all the permutations.
+        M_new{tp_i} =  match2nd(Unary(tp_i,:), Pairwise(tp_i,:), [],Nong, 0); % paws
+        
+        valid_tracks{tp_i} = all(M_new{tp_i}>0,2);
+
+        if ~all(valid_tracks{tp_i})
+            warning('Constraints do not result in valid trajectories. Please edit a frame closer to the previously edited frame: NUM');
+            track_bottom = [];
+            return
+        else
+            % Get new tracks: % FIXME: This definitely needs to be modular!
+           
+            for i_features = np{tp_i}
+                for i_frames = 1:N_frames
+                    if M_new{tp_i}(i_features,i_frames) <= size(tracks_bottom{tp_i,i_frames},2)
+                        final_tracks_c_new(1:2,npi{tp_i}(i_features),i_frames) = tracks_bottom{tp_i,i_frames}(1:2,M_new{tp_i}(i_features,i_frames));
+                    end
+                end
+            end
+
+            % Side view for now unchanged:
+            D.final_tracks_c = cat(1,final_tracks_c_new,D.final_tracks_c(3,:,:));
+            %final_tracks_c_new(:,5,:) = final_tracks_c(:,5,:); %%% FIXME: No snout yet!
+
+            % Save changes to unary, pairwise and candidates:
+            D.debug.Unary = Unary;
+            D.debug.Pairwise = Pairwise;
+            D.debug.tracks_bottom = tracks_bottom;
+            if tp_i == 1
+                D.debug.M(1:4,:) = M_new{tp_i};
+            else
+                D.debug.M(5,:) = M_new{tp_i};
+            end
+        end
+    end
+    % Convert to original_view_tracks:
+    [track_bottom,~] = convertTracksToUnconstrainedView(D.final_tracks_c,D.tracks_tail_c,size(ind_warp_mapping),ind_warp_mapping,flip,1);
     
-    % Save changes to unary, pairwise and candidates:
-    D.debug.Unary = Unary;
-    D.debug.Pairwise = Pairwise;
-    D.debug.tracks_bottom = tracks_bottom;
-    D.debug.M(1:4,:) = M_new;
+    % DE: moved the following commented code out of the way:
+                %     if ~valid_tracks(i_features)
+                %         warning('Could not find a valid trajectory for track %d. Rejecting changes. Try editing a smaller segment.',i_features);
+                %
+                %         % Adding the candidate that was previously chosen to the new
+                %         % candidate list, if any:
+                %         for i_changes = 1:length(correct_structure)
+                %             i_frame = correct_structure(i_changes).frame;
+                %
+                %             % Copying old tracks:
+                %             final_tracks_c_new(1:2,i_features,i_frame) = D.final_tracks_c(1:2,i_features,i_frame);
+                %
+                %             if D.debug.M(i_features,i_frame) <= size(D.debug.tracks_bottom{1,i_frame},2)
+                %                 % Replace manual candidate for the previously existing
+                %                 % candidate:
+                %                 tracks_bottom{1,i_frame}(:,i_features) = D.debug.tracks_bottom{1,i_frame}(:,D.debug.M(i_features,i_frame));
+                %                 M_new(i_features,i_frame) = i_features;
+                %
+                %             else
+                %                 % Remove the candidate:
+                %                 tracks_bottom{1,i_frame}(:,i_features) = [];
+                %                 M_new(i_features,i_frame) = size(tracks_bottom{1,i_frame},2)+1; % I don't think which ONG matters.
+                %
+                %             end
+                %
+                %         end
+                %
+                %         continue;
+                %     end
 end
 
-% Convert to original_view_tracks:
-[track_bottom,~] = convertTracksToUnconstrainedView(D.final_tracks_c,D.tracks_tail_c,size(ind_warp_mapping),ind_warp_mapping,flip,1);
-end
 
-
-% CLEAR ALL CORRECTIONS
+% CLEAR ALL LABELS
 % --- Executes on button press in pushbutton_ClearCorrections.
 function pushbutton_ClearCorrections_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton_ClearCorrections (see GCBO)
@@ -1265,7 +1366,7 @@ function pushbutton_ClearCorrections_Callback(hObject, eventdata, handles)
     guidata(handles.figure1,handles);
 end
 
-% CLEAR CORRECTIONS IN CURRENT FRAMES
+% CLEAR CORRECTIONS IN CURRENT FRAME
 
 % --- Executes on button press in pushbutton_ClearLabelsCurrentFrame.
 function pushbutton_ClearLabelsCurrentFrame_Callback(hObject, eventdata, handles)
@@ -1287,6 +1388,91 @@ function pushbutton_ClearLabelsCurrentFrame_Callback(hObject, eventdata, handles
     guidata(handles.figure1,handles);    
 end
 
+% overwrite tracks - copy LM_Tracks to tracks
+% --- Executes on button press in pushbutton_CopyTrack.
+function pushbutton_CopyTrack_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton_CopyTrack (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+    [userdata,video_id,~] = getGUIStatus(handles);
+    
+
+    userdata.data(video_id).track = userdata.data(video_id).LM_track;
+    
+    set(handles.figure1,'UserData',userdata);
+    displayImage([],[],handles);
+    guidata(handles.figure1,handles);
+
+end
+
+% overwrite tracks - copy labels to LM_Tracks
+% --- Executes on button press in pushbutton_OverwriteLMTrack.
+function pushbutton_OverwriteLMTrack_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton_OverwriteLMTrack (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+	[userdata,video_id,~] = getGUIStatus(handles);
+  
+        % Store current LM_Tracks
+        unique_id = datestr(now,'yyyymmddhhMMss');
+        total_frames = userdata.data(video_id).vid.Duration * userdata.data(video_id).vid.FrameRate;
+        eval(['[tracks_',unique_id,', tracks_tail_',unique_id,'] = Convert_Label2Track(userdata.data(video_id).LM_track,total_frames);']);
+        save(userdata.data(video_id).DataFile,['tracks_',unique_id],['tracks_tail_',unique_id],'-append')
+
+        % overwrite LM tracks with tracks
+         userdata.data(video_id).LM_track = userdata.data(video_id).track;     
+     
+    % Saving Changes: %%% FIXME: If the Unary and Pairwise matrices are not stored, the tracks can only be corrected once! 
+    set(handles.figure1,'UserData',userdata);
+    displayImage([],[],handles);
+    guidata(handles.figure1,handles);
+
+end
+
+
+% acccept labels - merging them with LM_Tracks
+% --- Executes on button press in AcceptLabels.
+function AcceptLabels_Callback(hObject, eventdata, handles)
+% hObject    handle to AcceptLabels (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+        [userdata,video_id,~] = getGUIStatus(handles);
+        
+        % Store current LM_Tracks
+        unique_id = datestr(now,'yyyymmddhhMMss');
+        totalFrames = int16(userdata.data(video_id).vid.Duration * userdata.data(video_id).vid.FrameRate);
+        eval(['[tracks_',unique_id,', tracks_tail_',unique_id,'] = Convert_Label2Track(userdata.data(video_id).LM_track,totalFrames);']);
+        save(userdata.data(video_id).DataFile,['tracks_',unique_id],['tracks_tail_',unique_id],'-append')
+
+        % merge tracks
+        LM_tracks = eval(['tracks_',unique_id]); LM_tracks_tail = eval(['tracks_tail_',unique_id]); %clear(['tracks_',unique_id],['tracks_tail_',unique_id]);
+        [tracks, tracks_tail] = Convert_Label2Track(userdata.data(video_id).track,totalFrames);
+        LM_tracks = LM_tracks(:,:,1:totalFrames);
+        tracks = tracks(:,:,1:totalFrames);
+        LM_tracks(~isnan(tracks)) = tracks(~isnan(tracks));
+        LM_tracks_tail(~isnan(tracks_tail)) = tracks_tail(~isnan(tracks_tail));
+        
+        tracks = LM_tracks; tracks_tail = LM_tracks_tail; % (Stupid names)
+        save(userdata.data(video_id).DataFile,'tracks','tracks_tail','-append');
+        
+        % write corrected tracks to LM_tracks   
+        [empty_track, empty_visibility] = initializeEmptytrackVisibility(userdata,totalFrames); 
+        userdata.data(video_id).LM_track = Convert_Track2Label(tracks,tracks_tail,empty_track);         
+                      
+     
+    % Saving Changes: %%% FIXME: If the Unary and Pairwise matrices are not stored, the tracks can only be corrected once! 
+    set(handles.figure1,'UserData',userdata);
+    displayImage([],[],handles);
+    guidata(handles.figure1,handles);
+
+end
+
+
+%% FILE ACTIONS
+
 % SAVE CORRECTIONS
 % --- Executes on button press in pushbutton_SaveCorrections.
 function pushbutton_SaveCorrections_Callback(hObject, eventdata, handles)
@@ -1298,16 +1484,18 @@ function pushbutton_SaveCorrections_Callback(hObject, eventdata, handles)
     
     CorrectionLabels = userdata.data(video_id).track;
     BadMovie = userdata.data(video_id).BadMovie;
-    SwiSta = userdata.data(video_id).SwiSta;
+%     SwiSta = userdata.data(video_id).SwiSta;
+     total_frames = userdata.data(video_id).vid.Duration * userdata.data(video_id).vid.FrameRate;
+    [corr_final_tracks, corr_tracks_tail] = Convert_Label2Track(userdata.data(video_id).track,total_frames);
+    [final_tracks, tracks_tail] = Convert_Label2Track(userdata.data(video_id).LM_track,total_frames);
     
-    [corr_final_tracks, corr_tracks_tail] = Convert_Label2Track(CorrectionLabels);
 
     % save
     tclock = clock;
     timestamp = ['_d',num2str(tclock(1)),'_',num2str(tclock(2)),'_',num2str(tclock(3)),'_t',num2str(tclock(4)),'_',num2str(tclock(5))];
     copyfile(userdata.data(video_id).DataFile,[userdata.data(video_id).DataFile(1:end-4),'_outdated_on',timestamp,'.mat'])
-    
-    save(userdata.data(video_id).DataFile,'epochs', 'CorrectionLabels','BadMovie','SwiSta','corr_final_tracks','corr_tracks_tail','-append');  
+%     'SwiSta',
+    save(userdata.data(video_id).DataFile,'epochs', 'CorrectionLabels','BadMovie','corr_final_tracks','corr_tracks_tail','final_tracks','tracks_tail','timestamp','-append');  
     
     col = get(handles.pushbutton_SaveCorrections,'BackgroundColor');
     set(handles.pushbutton_SaveCorrections,'String','DATA SAVED','BackgroundColor',[1 0 0])
@@ -2337,26 +2525,6 @@ function popupmenu_n_points_Callback(hObject, eventdata, handles)
     plotBoxImage(handles,2);
     updatePosition(handles);
 
-    % Updating Color pushbutton:
-    pb_color = get(userdata.plot_handles.track{lind(1)}{lind(2)}{lind(3)}(1,value),'Color'); % It should always be the same for all plot handles...
-    set(handles.pushbutton_color,'BackgroundColor',pb_color);
-
-end
-
-%button press in pushbutton_color.
-function pushbutton_color_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton_color (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-[userdata,~,lind] = getGUIStatus(handles);
-new_color = uisetcolor;
-if length(new_color) ~= 1
-    % Setting the color to the button:
-    set(userdata.plot_handles.track{lind(1)}{lind(2)}{lind(3)}(:,lind(4),:),'Color',new_color);
-    set(handles.pushbutton_color,'BackgroundColor',new_color);
-end
-set(handles.figure1,'userdata',userdata);
-guidata(hObject,handles);
 
 end
 
@@ -2484,11 +2652,9 @@ if strcmpi(answ,'yes')
                 % Updating GUI visuals:
                 set([handles.popupmenu_type handles.popupmenu_class...
                     handles.popupmenu_name handles.popupmenu_n_points...
-                    handles.pushbutton_delete_label handles.checkbox_display_all_tracks...
-                    handles.checkbox_all_points handles.pushbutton_color],'Enable','off');
+                    handles.pushbutton_delete_label handles.checkbox_display_all_tracks],'Enable','off');
                 set([handles.popupmenu_type handles.popupmenu_n_points...
                     handles.popupmenu_class handles.popupmenu_name],'String',' ');
-                set(handles.pushbutton_color,'BackgroundColor',[1 1 1]);
                 return;
             elseif Ntype < lind(1)
                 lind(1) = Ntype;
@@ -2548,178 +2714,6 @@ plotBoxImage(handles,2);
 
 end
 
-%       -- BOTTOM VIEW SIZE --
-
-function edit_h_bottom_Callback(hObject, eventdata, handles)
-% hObject    handle to edit_h_bottom (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of edit_h_bottom as text
-%        str2double(get(hObject,'String')) returns contents of edit_h_bottom as a double
-new_h = str2double(get(hObject,'String'));
-[userdata,video_id,lind] = getGUIStatus(handles);
-if ~isnan(new_h) && video_id > 0
-    new_h = min(max(new_h,1),userdata.data(video_id).vid.Height*2);
-    set(handles.edit_h_bottom,'String',num2str(new_h));
-    bs = userdata.labels{lind(1)}{lind(2)}(1).box_size;
-    bs(1,1) = new_h;
-    for i_l = 1:length(userdata.labels{lind(1)}{lind(2)})
-        userdata.labels{lind(1)}{lind(2)}(i_l).box_size = bs;
-    end
-    set(handles.figure1,'userdata',userdata);
-    plotBoxImage(handles,1);
-else
-    set(handles.edit_h_bottom,'String',num2str(userdata.labels{lind(1)}{lind(2)}(lind(3)).box_size(1,1)));
-end
-guidata(hObject,handles);
-end
-
-function edit_w_bottom_Callback(hObject, eventdata, handles)
-% hObject    handle to edit_w_bottom (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of edit_w_bottom as text
-%        str2double(get(hObject,'String')) returns contents of edit_w_bottom as a double
-new_w = str2double(get(hObject,'String'));
-[userdata,video_id,lind] = getGUIStatus(handles);
-if ~isnan(new_w) && video_id > 0
-    new_w = min(max(new_w,1),userdata.data(video_id).vid.Width*2);
-    set(handles.edit_w_bottom,'String',num2str(new_w));
-    userdata.labels{lind(1)}{lind(2)}(lind(3)).box_size(2,1) = new_w;
-    set(handles.figure1,'userdata',userdata);
-    plotBoxImage(handles,1);
-else
-    set(handles.edit_w_bottom,'String',num2str(userdata.labels{lind(1)}{lind(2)}(lind(3)).box_size(2,1)));
-end
-guidata(hObject,handles);
-end
-
-%button press in pushbutton_h_bottom_add.
-function pushbutton_h_bottom_add_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton_h_bottom_add (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-new_h = str2double(get(handles.edit_h_bottom,'String'))+1;
-set(handles.edit_h_bottom,'String',num2str(new_h));
-edit_h_bottom_Callback(handles.edit_h_bottom,[],handles);
-end
-
-%button press in pushbutton_h_bottom_sub.
-function pushbutton_h_bottom_sub_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton_h_bottom_sub (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-new_h = str2double(get(handles.edit_h_bottom,'String'))-1;
-set(handles.edit_h_bottom,'String',num2str(new_h));
-edit_h_bottom_Callback(handles.edit_h_bottom,[],handles);
-end
-
-%button press in pushbutton_w_bottom_add.
-function pushbutton_w_bottom_add_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton_w_bottom_add (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-new_w = str2double(get(handles.edit_w_bottom,'String'))+1;
-set(handles.edit_w_bottom,'String',num2str(new_w));
-edit_w_bottom_Callback(handles.edit_w_bottom,[],handles);
-end
-
-%button press in pushbutton_w_bottom_sub.
-function pushbutton_w_bottom_sub_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton_w_bottom_sub (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-new_w = str2double(get(handles.edit_w_bottom,'String'))-1;
-set(handles.edit_w_bottom,'String',num2str(new_w));
-edit_w_bottom_Callback(handles.edit_w_bottom,[],handles);
-end
-
-%       -- SIDE VIEW SIZE --
-
-function edit_h_side_Callback(hObject, eventdata, handles)
-% hObject    handle to edit_h_side (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of edit_h_side as text
-%        str2double(get(hObject,'String')) returns contents of edit_h_side as a double
-new_h = str2double(get(hObject,'String'));
-[userdata,video_id,lind] = getGUIStatus(handles);
-if ~isnan(new_h) && video_id > 0
-    new_h = min(max(new_h,1),userdata.data(video_id).vid.Height*2);
-    set(handles.edit_h_side,'String',num2str(new_h));
-    userdata.labels{lind(1)}{lind(2)}(lind(3)).box_size(1,2) = new_h;
-    set(handles.figure1,'userdata',userdata);
-    plotBoxImage(handles,2);
-else
-    set(handles.edit_h_side,'String',num2str(userdata.labels{lind(1)}{lind(2)}(lind(3)).box_size(1,2)));
-end
-guidata(hObject,handles);
-end
-
-function edit_w_side_Callback(hObject, eventdata, handles)
-% hObject    handle to edit_w_side (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of edit_w_side as text
-%        str2double(get(hObject,'String')) returns contents of edit_w_side as a double
-new_w = str2double(get(hObject,'String'));
-[userdata,video_id,lind] = getGUIStatus(handles);
-if ~isnan(new_w) && video_id > 0
-    new_w = min(max(new_w,1),userdata.data(video_id).vid.Width*2);
-    set(handles.edit_w_side,'String',num2str(new_w));
-    userdata.labels{lind(1)}{lind(2)}(lind(3)).box_size(2,2) = new_w;
-    set(handles.figure1,'userdata',userdata);
-    plotBoxImage(handles,2);
-else
-    set(handles.edit_w_side,'String',num2str(userdata.labels{lind(1)}{lind(2)}(lind(3)).box_size(2,2)));
-end
-guidata(hObject,handles);
-end
-
-%button press in pushbutton_h_side_add.
-function pushbutton_h_side_add_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton_h_side_add (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-new_h = str2double(get(handles.edit_h_side,'String'))+1;
-set(handles.edit_h_side,'String',num2str(new_h));
-edit_h_side_Callback(handles.edit_h_side,[],handles);
-end
-
-%button press in pushbutton_h_side_sub.
-function pushbutton_h_side_sub_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton_h_side_sub (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-new_h = str2double(get(handles.edit_h_side,'String'))-1;
-set(handles.edit_h_side,'String',num2str(new_h));
-edit_h_side_Callback(handles.edit_h_side,[],handles);
-end
-
-%button press in pushbutton_w_side_add.
-function pushbutton_w_side_add_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton_w_side_add (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-new_w = str2double(get(handles.edit_w_side,'String'))+1;
-set(handles.edit_w_side,'String',num2str(new_w));
-edit_w_side_Callback(handles.edit_w_side,[],handles);
-end
-
-%button press in pushbutton_w_side_sub.
-function pushbutton_w_side_sub_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton_w_side_sub (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-new_w = str2double(get(handles.edit_w_side,'String'))-1;
-set(handles.edit_w_side,'String',num2str(new_w));
-edit_w_side_Callback(handles.edit_w_side,[],handles);
-end
-
 %% DATA GUI
 
 % -- Processes selected video file, checks if it is already loaded and if
@@ -2758,10 +2752,11 @@ function handles = addVideoFile(handles,path_name,file_name)
         d = initializeUserDataStructure(userdata, vid);
 
         if video_id == 1
-            % If the structure had been properly initialized as empty this
+            % FIXME: If the structure had been properly initialized as empty this
             % check would not have been needed.
             userdata.data = d;
         else
+            
             userdata.data(video_id) = d;
         end
 
@@ -2772,7 +2767,7 @@ function handles = addVideoFile(handles,path_name,file_name)
 
         if exist(lab_path,'file')
             % Attempt to load label file.
-            handles = loadtrack(handles, load(lab_path),true);
+            handles = loadtrack(handles, load(lab_path)); % JF: third argument true removed
         end
         userdata = get(handles.figure1,'userdata');
         % If for some reason the bkg path is not the same as the one loaded we
@@ -2869,7 +2864,9 @@ function listbox_files_Callback(hObject, eventdata, handles)
         if exist(expected_data_file,'file') == 2
             loaded_data = load(expected_data_file);
             handles = loadtrack(handles, loaded_data);
+
             [userdata,video_id] = getGUIStatus(handles);
+            
             userdata.data(video_id).DataFile = expected_data_file;
             % Preparing limited video window
 
@@ -3174,16 +3171,19 @@ function axes_frame_ButtonDownFcn(hObject,eventdata,handles)
         return; 
     end
     
+    [userdata,video_id,lind] = getGUIStatus(handles);
+    
     p = get(handles.axes_frame,'CurrentPoint');
     p = round(p(1,1:2));
 
-    if p(2) > str2double(get(handles.edit_split_line,'String'))
+    if p(2) > userdata.data(video_id).split_line
+        
         view = 1; % Bottom
     else
         view = 2; % Side
     end
 
-    [userdata,video_id,lind] = getGUIStatus(handles);
+    
 
     % If showing corrected images, p needs to be warped back to original:
     if handles.radiobutton_corrected == get(handles.uipanel_distortion,'SelectedObject')
@@ -3207,19 +3207,18 @@ function axes_frame_ButtonDownFcn(hObject,eventdata,handles)
 
     
     userdata.data(video_id).track{lind(1)}{lind(2)}{lind(3)}(:,lind(4),userdata.data(video_id).current_frame,view) = p';
-    % If invisible set to visible
-    if userdata.data(video_id).visibility{lind(1)}{lind(2)}{lind(3)}(lind(4),userdata.data(video_id).current_frame,view) == 1
-        if view == 1
-            set(handles.popupmenu_visible_bottom,'Value',2);
-        else
-            set(handles.popupmenu_visible_side,'Value',2);
-        end
-    end
+
     userdata.data(video_id).visibility{lind(1)}{lind(2)}{lind(3)}(lind(4),userdata.data(video_id).current_frame,view) = 2;
+    
     set(handles.figure1,'UserData',userdata);
     updatePosition(handles);
     displayImage([],[],handles);
     guidata(handles.figure1,handles);
+    
+    if handles.togglebutton_RetrackMode.Value
+       pushbutton_ReTrack_Callback(hObject, eventdata, handles);
+    end
+    
 end
 
 function displayImage(obj,event,handles)
@@ -3271,6 +3270,7 @@ function displayImage(obj,event,handles)
         if get(handles.checkbox_vertical_flip,'Value')
             xIDX(1,end:-1:1) = handles.figure1.UserData.data(video_id).vid.Width - xIDX +1;
         end
+        xIDX = xIDX(ismember(xIDX,[1:userdata.data(video_id).vid.Width]));
         Iorg = Iorg(:,xIDX);
         Idist = Idist(:,xIDX);
     end
@@ -3284,7 +3284,7 @@ function displayImage(obj,event,handles)
     end
     drawnow;
     set(handles.edit_frame,'String',num2str(current_frame));
-
+       
 	plotBoxImage(handles,1); % Plots labelling for bottom view
 	plotBoxImage(handles,2); % Plots labelling for side view
 
@@ -3294,17 +3294,13 @@ function displayImage(obj,event,handles)
             handles.figure1.UserData.data(video_id).current_frame=current_frame+str2double(handles.edit_frame_step.String);
         end
     end
-   % % Update the i and j locations of points:
-    [userdata,~,lind] = getGUIStatus(handles);
-    tp = get(userdata.plot_handles.track{lind(1)}{lind(2)}{lind(3)}(1,lind(4),:),{'Xdata','Ydata'});
-    set([handles.edit_j_bottom handles.edit_i_bottom],{'String'},...
-        cellfun(@num2str,tp(1,:)','un',0));
-    set([handles.edit_j_side handles.edit_i_side],{'String'},...
-        cellfun(@num2str,tp(2,:)','un',0));
+    
     set(handles.figure1,'CurrentAxes',handles.axes_frame);
 end
 
 % --- PLOTTING LABELS
+
+
 
 function [] = plotBoxImage(handles,i_view)
     % Input:
@@ -3534,15 +3530,7 @@ function updatePosition(handles)
         end
     end
 
-    set([handles.edit_j_bottom handles.edit_i_bottom],{'String'},...
-        strsplit(num2str(pos(:,:,:,1)'),' ')');
-    set([handles.edit_j_side handles.edit_i_side],{'String'},...
-        strsplit(num2str(pos(:,:,:,2)'),' ')');
-    set(handles.edit_split_line,'String',num2str(userdata.data(video_id).split_line));
     set(handles.split_line,'Ydata',[userdata.data(video_id).split_line userdata.data(video_id).split_line]);
-    set(handles.edit_scale,'String',num2str(userdata.data(video_id).scale));
-    set(handles.popupmenu_visible_bottom,'Value',vis(:,:,1));
-    set(handles.popupmenu_visible_side,'Value',vis(:,:,2));
 end
 
 function updateVisibility(handles)
@@ -3551,8 +3539,6 @@ function updateVisibility(handles)
     vis = userdata.data(video_id).visibility{lind(1)}...
         {lind(2)}{lind(3)}(lind(4),userdata.data(video_id).current_frame,:);
 
-    set(handles.popupmenu_visible_bottom,'Value',vis(:,:,1));
-    set(handles.popupmenu_visible_side,'Value',vis(:,:,2));
 end
 
 % --- Generates plot handles:
@@ -3715,7 +3701,15 @@ function handles = loadtrack(handles,loaded_data)
     end
     
     % Debug data for the manipulation of tracks:
-    userdata.data(video_id).DebugData = rmfield(loaded_data,{'data','final_tracks','tracks_tail'});
+    % JF: these fields don't exist on the data I was trying to load:
+%     fields_to_remove = {'data','final_tracks','tracks_tail'};
+%     userdata.data(video_id).DebugData = loaded_data;
+%     
+%     for i_frm = 1:length(fields_to_remove)
+%         if isfield(userdata.data(video_id).DebugData,fields_to_remove{i_frm})
+%            userdata.data(video_id).DebugData = rmfield(userdata.data(video_id).DebugData,fields_to_remove{i_frm});
+%         end
+%     end
     
 	userdata.data(video_id).flip = loaded_data.data.flip;
     userdata.data(video_id).scale = loaded_data.data.scale;
@@ -3845,6 +3839,7 @@ end
 % ---
 function [empty_track, empty_visibility] = initializeEmptytrackVisibility(userdata, Nframes)
     N_types = length(userdata.types);
+    Nframes = int16(Nframes);
     % Initializing an empty structure:
     empty_track = cell(1,N_types);
     empty_visibility = cell(1,N_types);
@@ -4244,4 +4239,3 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 end
-

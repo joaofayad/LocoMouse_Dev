@@ -27,7 +27,13 @@ if flip
     tracks_tail(1,:,:) = size(IDX,2) - tracks_tail(1,:,:) + 1;
     
     % Correcting L/R paw label:
-    final_tracks = final_tracks(:,[3 4 1 2 5],:);
+    track_label = [3 4 1 2];
+    
+    if size(final_tracks,2) > 4
+        track_label = [track_label 5:size(final_tracks,2)];
+    end
+    
+    final_tracks = final_tracks(:,track_label,:);
 end
 
 [~, Ntracks, Nframes] = size(final_tracks);

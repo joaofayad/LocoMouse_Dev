@@ -99,7 +99,13 @@ ComputeMouseBox_cmd_string(tON) = {{'c++','config_hf.yml'}};
 tON = tON+1; % don't edit
 ComputeMouseBox_option(tON) = {'C++ Ladder'}; 
 ComputeMouseBox_cmd_string(tON) = {{'c++','config.yml'}};
-                        
+           
+%% [8] C++ Rotary Treadmill
+tON = tON+1; % don't edit
+ComputeMouseBox_option(tON) = {'C++ Rotary Treadmill'}; 
+ComputeMouseBox_cmd_string(tON) = {{'c++','config_rtm.yml'}};
+
+
 %%
 save([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'ComputeMouseBox_option','ComputeMouseBox_cmd_string','WeightSettings')
 clear('ComputeMouseBox_option','ComputeMouseBox_cmd_string','WeightSettings','tON','ParameterSet','weight_defaults','p_boundingBoxFunctions');

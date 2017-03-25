@@ -117,6 +117,18 @@ but needs user input on the scaling factor.
 However, for mice that look white on the image it might not be possible to
 distinguish paws from body on the bottom view, which would break the system.
 
+--|Questions we were asked|--
+* What objective did you use and how far from the corridor is it?
+In the first publication using LocoMouse:
+objective: format is 4/3 inch, focal length 12 mm, iris range F2.0-22
+distance to mirror ca 60 cm
+corridor in view: ca 55 cm
+
+* Have you tried locoMouse also on data with lower sampling rates than 400Hz (e.g. 200Hz frame rate) and does it function comparably?
+We have, and it also works. However, errors occur when the algorithm tries to 
+assign identity to the potential paws when the paws move too far between 
+frames. One can change the algorithm to allow larger distances, but then you
+run into the problem that more than one paw is located within the search region. In any case, if you reduce the frame rate, you need to make sure the exposure time does not increase. Longer exposure times lead to motion blurr.
 
 --|Acknowledgements|-- 
 This software was develop by Joao Fayad at the Neural Circuits and Behavior Lab
