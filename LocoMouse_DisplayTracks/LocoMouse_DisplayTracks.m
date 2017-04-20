@@ -630,7 +630,7 @@ function menu_load_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 %---- Updating the tracks
-function handles = loadTracks(handles, final_tracks, tracks_tail)
+function handles = loadTracks(handles, final_tracks, tracks_tail, debug)
 % Checking the number of frames: Should be the number of frames of the
 % video except when the tracks have less data.
 handles.point_tracks = final_tracks;
@@ -654,18 +654,22 @@ else
     set(handles.plot_handles_tail,'Visible','off');
 end
 
-%% FIXME: Not supported for loading.
-% Initialising the occlusion grid display:
-% if length(varargin{1}) > 3
-%     handles.ong_tracks = varargin{1}{4}{1};
-%     handles.bounding_box = varargin{1}{4}{2};
-%     handles.N_ong_tracks = size(handles.ong_tracks,2);
-%     handles.plot_handles_ong = line(ones(2,handles.N_ong_tracks),ones(2,handles.N_ong_tracks),'Marker','+','Color','w','MarkerFaceColor','m','LineStyle','none','Visible','off');
-%     handles.color_choice_ong = get(handles.plot_handles_ong,'Color');
-% else
+%Initialising the occlusion grid display:
+if ~isempty(debug)
+    handles.ong_tracks = debug.Occlusion_Grid_Bottom;
+    handles.bounding_box = debug.bounding_box;
+    handles.N_ong_tracks = size(debug.Occlusion_Grid_Bottom,2);
+    handles.plot_handles_ong = line(ones(2,handles.N_ong_tracks),ones(2,handles.N_ong_tracks),'Marker','+','Color','w','MarkerFaceColor','m','LineStyle','none','Visible','off');
+    handles.color_choice_ong = get(handles.plot_handles_ong,'Color');
+    set(handles.checkbox_occlusion,'Enable','on');
+else
+    if isfield(handles,'plot_handles_ong')
+        delete(handles.plot_handles_ong);
+        set(handles.checkbox_occlusion,'Enable','off');
+    end
     handles.ong_tracks = [];
     handles.N_ong_tracks = 0;
-% end
+end
 
 
 %---- Updating the background:
@@ -734,8 +738,8 @@ if ~exist(vid_name,'file')
    warning('Could not find the specified video file %s', vid_name);
    [file_name,path_name] = uigetfile(handles.supported_files,'Choose a Video File for the loaded data:',handles.latest_path,'MultiSelect','off');
    handles.latest_path = path_name;
-     
-   if isempty(file_name)
+   
+   if ~ischar(file_name)
        error('To load tracks one must specify a video file');
    end
    
@@ -773,7 +777,7 @@ D = load(fullfile(path_name,file_name));
 
 handles = loadVideo(handles,D.data.vid,D.data.flip);
 handles = loadBackground(handles,D.data.bkg);
-handles = loadTracks(handles,D.final_tracks,D.tracks_tail);
+handles = loadTracks(handles,D.final_tracks,D.tracks_tail,D.debug);
 handles = resetTimer(handles);
 displayImage([],[],handles);
 
@@ -861,11 +865,13 @@ set([handles.edit_frames, ...
     handles.slider_frames,...
     handles.slider_speed,...
     handles.checkbox_background,...
-    handles.checkbox_occlusion,...
     handles.togglebutton_play,...
     handles.popupmenu_marker,...
     handles.popupmenu_tracks],'Enable','on');
-
+    % FIXME: Maybe the background should be set depending on a valid
+    % background existing.
+    % handles.checkbox_occlusion,...
+   
 
 function handles = resetTimer(handles)
 % Initializing the timer:

@@ -3375,7 +3375,6 @@ end
 function [userdata] = plotBoxImage_proper(userdata, video_id, lind,  warp, i_view, track_field)
     flip = userdata.data(video_id).flip;
     box_size_k = userdata.labels{lind(1)}{lind(2)}(lind(3)).box_size(:,i_view);  
-    
     LimWin = userdata.data(video_id).LimitedWindow_X(userdata.data(video_id).current_frame,flip+1);
     [tHeight,tWidth] = size(userdata.data(video_id).inv_ind_warp_mapping);
     track_k = userdata.data(video_id).(track_field){lind(1)}{lind(2)}{lind(3)}...
@@ -3558,117 +3557,117 @@ function H = plotHandles(N_points,ColorMatrix)
     end
 end
 
-%% MENU
-
-function menu_file_Callback(hObject, eventdata, handles)
-    % hObject    handle to menu_file (see GCBO)
-    % eventdata  reserved - to be defined in a future version of MATLAB
-    % handles    structure with handles and user data (see GUIDATA)
-
-end
-
-function menu_file_save_Callback(hObject, eventdata, handles)
-    % hObject    handle to menu_file_save (see GCBO)
-    % eventdata  reserved - to be defined in a future version of MATLAB
-    % handles    structure with handles and user data (see GUIDATA)
-    [userdata,video_id] = getGUIStatus(handles);
-    if video_id > 0
-        struct_to_save = userdata.data(video_id);
-        [~,name,~] = fileparts(struct_to_save.vid.Name);
-        [file_name,path_name] = uiputfile({'*.mat','MAT-files (*.mat)'},'Select File for Save As',fullfile(handles.latest_path,sprintf('%s_labelling.mat',name)));
-
-        if ~isequal(file_name,0) && ~isequal(path_name,0)
-            handles.latest_path = path_name;
-
-            % Removing the VideoReader structure and putting it as a path:
-            struct_to_save.vid = fullfile(struct_to_save.vid.Path,struct_to_save.vid.Name);
-            % For now there is no specific choice of background image, thus there
-            % is no need to save its name either.
-            struct_to_save.start_frame = struct_to_save.current_start_frame; % save start frame
-            struct_to_save.frame_step = struct_to_save.current_frame_step; % save step frame
-
-            struct_to_save = rmfield(struct_to_save,{'current_frame','current_frame_step','current_start_frame','bkg',...
-                'calibration_popup_id','background_popup_id','ind_warp_mapping','inv_ind_warp_mapping',});% removing fields that are no longer saved.
-            % Processing the track to a format that is compatible witht the
-            % rest of the code. Unfortunately the most useful format for
-            % analysis is [x;y;z] or [x;y;x2;z], which makes indexing the 
-            % bottom view slightly more complicated.
-            labelled_frames = false(1,userdata.data(video_id).vid.NumberOfFrames);
-            N_types = length(userdata.types);
-
-            % Extracting the visibility:
-            for i_type = 1:N_types
-                N_class_type = length(userdata.classes{i_type});
-                for i_class = 1:N_class_type
-                    labelled_frames = labelled_frames | ...
-                        any(any(cell2mat(struct_to_save.visibility{i_type}{i_class}')>1,1),3);
-                end
-            end
-
-
-            for i_type = 1:N_types
-                N_class_type = length(userdata.classes{i_type});
-
-                for i_class = 1:N_class_type
-                    N_feature_class_type = length(userdata.features{i_type}{i_class});
-
-                    for i_feature = 1:N_feature_class_type
-                        struct_to_save.track{i_type}{i_class}{i_feature} = ...
-                            cat(1,struct_to_save.track...
-                            {i_type}{i_class}{i_feature}(:,:,labelled_frames,1),...
-                            struct_to_save.track...
-                            {i_type}{i_class}{i_feature}(:,:,labelled_frames,2));
-                        struct_to_save.visibility{i_type}{i_class}{i_feature} = struct_to_save.visibility{i_type}{i_class}{i_feature}(:,labelled_frames,:)-1;
-                    end
-                end
-            end
-            struct_to_save.labelled_frames = find(labelled_frames); % Frames that have some data.
-            struct_to_save.labels = userdata.labels; % Save info about the labels.
-            save(fullfile(path_name,file_name),'-struct','struct_to_save'); % Generating the MAT file.
-            userdata.is_data_saved = true; % FIXME: This is so we can generate a warning before closing the labeling gui if data is not saved.
-        end
-        set(handles.figure1,'userdata',userdata);
-        guidata(hObject,handles);
-    else
-        fprintf('There are no labelled videos!\n');
-    end
-end
-
-function menu_file_load_Callback(hObject, eventdata, handles)
-    % hObject    handle to menu_file_load (see GCBO)
-    % eventdata  reserved - to be defined in a future version of MATLAB
-    % handles    structure with handles and user data (see GUIDATA)
-    [~,video_id] = getGUIStatus(handles);
-    if video_id > 0
-        [file_name,path_name] = uigetfile(handles.latest_path,'*.mat');
-        if ~isequal(file_name,0) && ~isequal(path_name,0)
-            try
-                handles.latest_path = path_name;
-                loaded_data = load(fullfile(path_name,file_name));
-                handles = loadtrack(handles, loaded_data);
-                guidata(hObject,handles);
-                % Call one of the functions that refreshes the gui.
-                listbox_files_Callback(handles.listbox_files,[],handles);
-
-            catch error_type
-                beep
-                fprintf('Failed to merge structures!\n');
-                if ~isempty(error_type.message);
-                    fprintf([error_type.message '\n']);
-                end
-                displayErrorGui(error_type);
-            end
-        end
-    else
-        fprintf('Please load videos first!\n');
-    end
-end
-
-function menu_save_all_Callback(hObject, eventdata, handles)
-% hObject    handle to menu_save_all (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-end
+% %% MENU
+% 
+% function menu_file_Callback(hObject, eventdata, handles)
+%     % hObject    handle to menu_file (see GCBO)
+%     % eventdata  reserved - to be defined in a future version of MATLAB
+%     % handles    structure with handles and user data (see GUIDATA)
+% 
+% end
+% 
+% function menu_file_save_Callback(hObject, eventdata, handles)
+%     % hObject    handle to menu_file_save (see GCBO)
+%     % eventdata  reserved - to be defined in a future version of MATLAB
+%     % handles    structure with handles and user data (see GUIDATA)
+%     [userdata,video_id] = getGUIStatus(handles);
+%     if video_id > 0
+%         struct_to_save = userdata.data(video_id);
+%         [~,name,~] = fileparts(struct_to_save.vid.Name);
+%         [file_name,path_name] = uiputfile({'*.mat','MAT-files (*.mat)'},'Select File for Save As',fullfile(handles.latest_path,sprintf('%s_labelling.mat',name)));
+% 
+%         if ~isequal(file_name,0) && ~isequal(path_name,0)
+%             handles.latest_path = path_name;
+% 
+%             % Removing the VideoReader structure and putting it as a path:
+%             struct_to_save.vid = fullfile(struct_to_save.vid.Path,struct_to_save.vid.Name);
+%             % For now there is no specific choice of background image, thus there
+%             % is no need to save its name either.
+%             struct_to_save.start_frame = struct_to_save.current_start_frame; % save start frame
+%             struct_to_save.frame_step = struct_to_save.current_frame_step; % save step frame
+% 
+%             struct_to_save = rmfield(struct_to_save,{'current_frame','current_frame_step','current_start_frame','bkg',...
+%                 'calibration_popup_id','background_popup_id','ind_warp_mapping','inv_ind_warp_mapping',});% removing fields that are no longer saved.
+%             % Processing the track to a format that is compatible witht the
+%             % rest of the code. Unfortunately the most useful format for
+%             % analysis is [x;y;z] or [x;y;x2;z], which makes indexing the 
+%             % bottom view slightly more complicated.
+%             labelled_frames = false(1,userdata.data(video_id).vid.NumberOfFrames);
+%             N_types = length(userdata.types);
+% 
+%             % Extracting the visibility:
+%             for i_type = 1:N_types
+%                 N_class_type = length(userdata.classes{i_type});
+%                 for i_class = 1:N_class_type
+%                     labelled_frames = labelled_frames | ...
+%                         any(any(cell2mat(struct_to_save.visibility{i_type}{i_class}')>1,1),3);
+%                 end
+%             end
+% 
+% 
+%             for i_type = 1:N_types
+%                 N_class_type = length(userdata.classes{i_type});
+% 
+%                 for i_class = 1:N_class_type
+%                     N_feature_class_type = length(userdata.features{i_type}{i_class});
+% 
+%                     for i_feature = 1:N_feature_class_type
+%                         struct_to_save.track{i_type}{i_class}{i_feature} = ...
+%                             cat(1,struct_to_save.track...
+%                             {i_type}{i_class}{i_feature}(:,:,labelled_frames,1),...
+%                             struct_to_save.track...
+%                             {i_type}{i_class}{i_feature}(:,:,labelled_frames,2));
+%                         struct_to_save.visibility{i_type}{i_class}{i_feature} = struct_to_save.visibility{i_type}{i_class}{i_feature}(:,labelled_frames,:)-1;
+%                     end
+%                 end
+%             end
+%             struct_to_save.labelled_frames = find(labelled_frames); % Frames that have some data.
+%             struct_to_save.labels = userdata.labels; % Save info about the labels.
+%             save(fullfile(path_name,file_name),'-struct','struct_to_save'); % Generating the MAT file.
+%             userdata.is_data_saved = true; % FIXME: This is so we can generate a warning before closing the labeling gui if data is not saved.
+%         end
+%         set(handles.figure1,'userdata',userdata);
+%         guidata(hObject,handles);
+%     else
+%         fprintf('There are no labelled videos!\n');
+%     end
+% end
+% 
+% function menu_file_load_Callback(hObject, eventdata, handles)
+%     % hObject    handle to menu_file_load (see GCBO)
+%     % eventdata  reserved - to be defined in a future version of MATLAB
+%     % handles    structure with handles and user data (see GUIDATA)
+%     [~,video_id] = getGUIStatus(handles);
+%     if video_id > 0
+%         [file_name,path_name] = uigetfile(handles.latest_path,'*.mat');
+%         if ~isequal(file_name,0) && ~isequal(path_name,0)
+%             try
+%                 handles.latest_path = path_name;
+%                 loaded_data = load(fullfile(path_name,file_name));
+%                 handles = loadtrack(handles, loaded_data);
+%                 guidata(hObject,handles);
+%                 % Call one of the functions that refreshes the gui.
+%                 listbox_files_Callback(handles.listbox_files,[],handles);
+% 
+%             catch error_type
+%                 beep
+%                 fprintf('Failed to merge structures!\n');
+%                 if ~isempty(error_type.message);
+%                     fprintf([error_type.message '\n']);
+%                 end
+%                 displayErrorGui(error_type);
+%             end
+%         end
+%     else
+%         fprintf('Please load videos first!\n');
+%     end
+% end
+% 
+% function menu_save_all_Callback(hObject, eventdata, handles)
+% % hObject    handle to menu_save_all (see GCBO)
+% % eventdata  reserved - to be defined in a future version of MATLAB
+% % handles    structure with handles and user data (see GUIDATA)
+% end
 
 
 %% MISC
