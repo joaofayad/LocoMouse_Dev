@@ -1,4 +1,4 @@
-function [final_tracks, tracks_tail, final_tracks_c, tracks_tail_c, debug, data] = cppToMATLABTracks(output_file,data)
+function [final_tracks_c, tracks_tail_c] = cppToMATLABTracks(output_file,data)
 output = readOpenCVYAML(output_file);
 output_fields = {'paw_tracks0','paw_tracks1','paw_tracks2','paw_tracks3','snout_tracks0'};
 tocat = cell(1,length(output_fields));
@@ -20,5 +20,5 @@ else
     tracks_tail_c = NaN(3,1,size(final_tracks_c,3));
 end
 
-[final_tracks, tracks_tail] = convertTracksToUnconstrainedView(final_tracks_c,tracks_tail_c,size(data.ind_warp_mapping),data.ind_warp_mapping,data.flip,data.scale);
-debug = [];
+% [final_tracks, tracks_tail] = convertTracksToUnconstrainedView(final_tracks_c,tracks_tail_c,size(data.ind_warp_mapping),data.ind_warp_mapping,data.flip,data.scale);
+% debug = [];

@@ -210,7 +210,6 @@ function LocoMouse_TrackCheck_OpeningFcn(hObject, ~, handles, varargin)
     % Initializing the split line:
     handles.split_line = line(0,0,'Linestyle','-','Linewidth',1,'Visible','off','Color','w');
 
-
     % Initializing the box size:
 %     set([handles.edit_h_bottom handles.edit_w_bottom handles.edit_h_side handles.edit_w_side],{'String'},...
 %         cellfun(@(x)(num2str(x)),num2cell(userdata.labels{1}{1}(1).box_size(:)),'un',0));
@@ -240,6 +239,9 @@ function LocoMouse_TrackCheck_OpeningFcn(hObject, ~, handles, varargin)
     % Checking if data has been saved or not:
     handles.is_data_saved = true;
 
+    % Getting active handles to disable while busy:
+    handles.silenced_handles = findobj(handles.figure1,'Enable','on');
+    
     % UIWAIT makes LocoMouse_TrackCheck wait for user response (see UIRESUME)
     guidata(hObject,handles)
     % uiwait(handles.figure1);
@@ -252,6 +254,8 @@ function LocoMouse_TrackCheck_OpeningFcn(hObject, ~, handles, varargin)
             LoadSettings_Callback([], [], handles, 'GUI_Recovery_Settings.mat')
         end
     end
+    
+    
     
 end
  
@@ -2719,104 +2723,104 @@ end
 % -- Processes selected video file, checks if it is already loaded and if
 % not checks for existing background and labelling files:
 function handles = addVideoFile(handles,path_name,file_name)
-    % Store the path in case more files are to be added...
-    handles.latest_path = path_name;
+% Store the path in case more files are to be added...
+handles.latest_path = path_name;
+current_file_list = get(handles.listbox_files,'String');
+
+if ~iscell(file_name)
+    file_name = {file_name};
+end
+
+% Check for repeated file names:
+file_name = cellfun(@(x)(fullfile(path_name,x)),file_name,'un',false);
+isrepeated = cellfun(@(x)(any(strcmpi(current_file_list,x))),file_name);
+
+file_name = file_name(~isrepeated);
+% Initialize the tracking structure for such videos:
+N_files = length(file_name);
+[userdata, ~] = getGUIStatus(handles);
+video_id = length(current_file_list);
+if isempty(current_file_list)
+    % Enabling the GUI:
+    changeGUIActiveState(handles);
+end
+for i_files = 1:N_files
+    % Updating the list with the current file so the video_id matches:
     current_file_list = get(handles.listbox_files,'String');
-
-    if ~iscell(file_name)
-        file_name = {file_name};
+    set(handles.listbox_files,'String',cat(1,current_file_list,file_name{i_files}));
+    video_id = video_id+1;
+    set(handles.listbox_files,'Value',video_id);
+    % Initialize the tracking structure for the videos:
+    vid = VideoReader(char(file_name{i_files}));
+    % Initializing the data structure for this video:
+    d = initializeUserDataStructure(userdata, vid);
+    
+    if video_id == 1
+        % FIXME: If the structure had been properly initialized as empty this
+        % check would not have been needed.
+        userdata.data = d;
+    else
+        
+        userdata.data(video_id) = d;
     end
-
-    % Check for repeated file names:
-    file_name = cellfun(@(x)(fullfile(path_name,x)),file_name,'un',false);
-    isrepeated = cellfun(@(x)(any(strcmpi(current_file_list,x))),file_name);
-
-    file_name = file_name(~isrepeated);
-    % Initialize the tracking structure for such videos:
-    N_files = length(file_name);
-    [userdata, ~] = getGUIStatus(handles);
-    video_id = length(current_file_list);
-    if isempty(current_file_list)
-        % Enabling the GUI:
-        changeGUIActiveState(handles);
+    
+    set(handles.figure1,'userdata',userdata);
+    [~,fname,~] = fileparts(char(file_name{i_files}));
+    % Checking if there are labelling files to load for this video:
+    lab_path = fullfile(vid.Path,[fname '_labelling.mat']);
+    
+    if exist(lab_path,'file')
+        % Attempt to load label file.
+        handles = loadtrack(handles, load(lab_path)); % JF: third argument true removed
     end
-    for i_files = 1:N_files
-        % Updating the list with the current file so the video_id matches:
-        current_file_list = get(handles.listbox_files,'String');
-        set(handles.listbox_files,'String',cat(1,current_file_list,file_name{i_files}));
-        video_id = video_id+1;
-        set(handles.listbox_files,'Value',video_id);
-        % Initialize the tracking structure for the videos:
-        vid = VideoReader(char(file_name{i_files}));
-        % Initializing the data structure for this video:
-        d = initializeUserDataStructure(userdata, vid);
-
-        if video_id == 1
-            % FIXME: If the structure had been properly initialized as empty this
-            % check would not have been needed.
-            userdata.data = d;
-        else
-            
-            userdata.data(video_id) = d;
+    userdata = get(handles.figure1,'userdata');
+    % If for some reason the bkg path is not the same as the one loaded we
+    % still check the current folder:
+    if isempty(userdata.data(video_id).bkg_path)
+        % Check if there is a background image with the same name:
+        impath = fullfile(vid.Path,[fname '.png']);
+        if exist(impath,'file')
+            % Adding a new background image:
+            [handles,N] = addBackgroundImage(impath,handles);
+            userdata.data(video_id).bkg_path = impath;
+            userdata.data(video_id).bkg = imread(impath);
+            userdata.data(video_id).background_popup_id = N;
+            set(handles.figure1,'userdata',userdata);
         end
-
-        set(handles.figure1,'userdata',userdata);
-        [~,fname,~] = fileparts(char(file_name{i_files}));
-        % Checking if there are labelling files to load for this video:
-        lab_path = fullfile(vid.Path,[fname '_labelling.mat']);
-
-        if exist(lab_path,'file')
-            % Attempt to load label file.
-            handles = loadtrack(handles, load(lab_path)); % JF: third argument true removed
-        end
-        userdata = get(handles.figure1,'userdata');
-        % If for some reason the bkg path is not the same as the one loaded we
-        % still check the current folder:
-        if isempty(userdata.data(video_id).bkg_path)
-            % Check if there is a background image with the same name:
-            impath = fullfile(vid.Path,[fname '.png']);
-            if exist(impath,'file')
-                % Adding a new background image:
-                [handles,N] = addBackgroundImage(impath,handles);
-                userdata.data(video_id).bkg_path = impath;
-                userdata.data(video_id).bkg = imread(impath);
-                userdata.data(video_id).background_popup_id = N;
-                set(handles.figure1,'userdata',userdata);
-            end
-        end
-
-%         if isempty(userdata.data(video_id).calibration_path)
-%             % Check if there is a calibration file with the same name:
-%             calpath = fullfile(vid.Path,[fname '_calibration.mat']);
-%             if exist(calpath,'file')
-%                 % Adding a new background image:
-%                 [handles,N] = addDistortionCorrection(handles,calpath);
-%                 userdata.data(video_id).calibration_path = calpath;
-%                 userdata.data(video_id).calibration_popup_id = N;
-%                 L = load(calpath);
-%                 userdata.data(video_id).ind_warp_mapping = L.ind_warp_mapping;
-%                 userdata.data(video_id).inv_ind_warp_mapping = L.inv_ind_warp_mapping;
-%                 userdata.data(video_id).split_line = L.split_line;
-%                 set(handles.figure1,'userdata',userdata);
-%                 edit_split_line_Callback([],[],handles);
-%             end
-%         end
-
-       
-        if ~isempty(userdata.data(end).bkg) % Check if background was loaded
-            set(handles.checkbox_display_background,'Enable','on');
-            set(handles.checkbox_display_background,'Value',1);
-        else
-            set(handles.checkbox_display_background,'Enable','off');
-        end
-
-        % Execute the poupmenu for the distortion files:
-        guidata(handles.figure1,handles);
-
-        clear vid;
     end
+    
+    %         if isempty(userdata.data(video_id).calibration_path)
+    %             % Check if there is a calibration file with the same name:
+    %             calpath = fullfile(vid.Path,[fname '_calibration.mat']);
+    %             if exist(calpath,'file')
+    %                 % Adding a new background image:
+    %                 [handles,N] = addDistortionCorrection(handles,calpath);
+    %                 userdata.data(video_id).calibration_path = calpath;
+    %                 userdata.data(video_id).calibration_popup_id = N;
+    %                 L = load(calpath);
+    %                 userdata.data(video_id).ind_warp_mapping = L.ind_warp_mapping;
+    %                 userdata.data(video_id).inv_ind_warp_mapping = L.inv_ind_warp_mapping;
+    %                 userdata.data(video_id).split_line = L.split_line;
+    %                 set(handles.figure1,'userdata',userdata);
+    %                 edit_split_line_Callback([],[],handles);
+    %             end
+    %         end
+    
+    
+    if ~isempty(userdata.data(end).bkg) % Check if background was loaded
+        set(handles.checkbox_display_background,'Enable','on');
+        set(handles.checkbox_display_background,'Value',1);
+    else
+        set(handles.checkbox_display_background,'Enable','off');
+    end
+    
+    % Execute the poupmenu for the distortion files:
     guidata(handles.figure1,handles);
-    clear path_name;
+    
+    clear vid;
+end
+guidata(handles.figure1,handles);
+clear path_name;
 end
 
 %       -- LISTBOX --
@@ -2830,12 +2834,17 @@ function listbox_files_Callback(hObject, eventdata, handles)
 % Hints: contents = cellstr(get(hObject,'String')) returns listbox_files contents as cell array
 %#        contents{get(hObject,'Value')} returns selected item from listbox_files
 
-  
+
+try
+    
+    handles = GUI_Status(handles,'off');
+    
+    
     [userdata,video_id] = getGUIStatus(handles);
     if video_id > 0
         % Reset the GUI with the current video:
         handles = resetGUI(handles);
-               
+        
         % Output and background functions:
         bkg_mode = get(handles.popupmenu_background_mode,'Value');
         output_mode = get(handles.popupmenu_output_mode,'Value');
@@ -2845,7 +2854,7 @@ function listbox_files_Callback(hObject, eventdata, handles)
         output_fun = output_fun{output_mode};clear output_mode
         output_path = get(handles.edit_output_path,'String');
         file_name=char(handles.listbox_files.String(handles.listbox_files.Value,:));
-
+        
         [~,trial_name,~] = fileparts(file_name);
         v=VideoReader(file_name);
         set(handles.text_VidInfo, ...
@@ -2858,25 +2867,25 @@ function listbox_files_Callback(hObject, eventdata, handles)
         end
         
         [out_path_data,~] = feval(output_fun,output_path,file_name);
-
+        
         expected_data_file = [out_path_data filesep trial_name,'.mat'];
-
+        
         if exist(expected_data_file,'file') == 2
             loaded_data = load(expected_data_file);
             handles = loadtrack(handles, loaded_data);
-
+            
             [userdata,video_id] = getGUIStatus(handles);
             
             userdata.data(video_id).DataFile = expected_data_file;
             % Preparing limited video window
-
+            
             if size(loaded_data.final_tracks,1) == 4 % collecting all X data in variable xtracks
                 xtracks = [loaded_data.final_tracks(1,:,:) loaded_data.final_tracks(3,:,:) loaded_data.tracks_tail(1,:,:) loaded_data.tracks_tail(3,:,:)]; % uncorrected tracks have two x values
             else
                 xtracks = [loaded_data.final_tracks(1,:,:) loaded_data.tracks_tail(1,:,:)]; % corrected tracks have one x value
             end
-                % the largest difference in x values found in all frames is minimum
-                % window size.
+            % the largest difference in x values found in all frames is minimum
+            % window size.
             xWidth = zeros(1,size(xtracks,3));
             WindowX= zeros(1,size(xtracks,3));
             for t_fi = 1: size(xtracks,3)
@@ -2903,7 +2912,7 @@ function listbox_files_Callback(hObject, eventdata, handles)
             
             updatePosition(handles);
             set([handles.radiobutton_corrected handles.radiobutton_original],'Enable','on')
-
+            
         else
             disp('DATA FILE not found. Please check settings.')
             disp(expected_data_file);
@@ -2936,7 +2945,11 @@ function listbox_files_Callback(hObject, eventdata, handles)
         guidata(hObject,handles);
         
     end
-    
+catch err
+end
+
+handles = GUI_Status(handles,'on');
+guidata(handles.figure1,handles);
 end
 
 %       -- ADD... --
@@ -4238,3 +4251,45 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 end
+
+
+% --- Sets the GUI on a wait status so no interaction is possible while it
+% is computing something.
+function handles = GUI_Status(handles,state)
+try
+    switch lower(state)
+        case 'on'
+                     
+            set(handles.silenced_handles,'Enable','on');
+            set(handles.figure1, 'pointer', handles.oldpointer)
+            drawnow;
+            
+        case 'off'
+                 
+            handles.silenced_handles = findobj(handles.figure1,'Enable','on');
+            set(handles.silenced_handles,'Enable','off');
+            handles.oldpointer = get(handles.figure1, 'pointer');
+            set(handles.figure1, 'pointer', 'watch')
+            drawnow;
+            
+        otherwise
+            error('state can only be ''on'' or ''off''.');
+    end
+catch err
+    
+    %%% FIXME: Display the error if it happens...
+    set(handles.figure1,'pointer',handles.oldpointer);
+    drawnow;
+    
+end
+end
+        
+        
+
+
+
+
+
+
+
+

@@ -50,10 +50,13 @@ debug_file = fullfile(output_path,sprintf('debug_%s.yml',vid_name));
 [final_tracks_c, tracks_tail_c] = cppToMATLABTracks(output_file);
 delete(output_file);
 
-% if exist(debug_file,'file')
+
+
+ if exist(debug_file,'file')
 %     
 %     debug = importLocoMouseYAML(debug_file);
-%     delete(debug_file);
+     delete(debug_file);
+ end
 %     
 % else
     debug = [];
