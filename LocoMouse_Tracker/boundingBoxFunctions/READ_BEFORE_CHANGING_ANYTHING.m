@@ -105,7 +105,11 @@ tON = tON+1; % don't edit
 ComputeMouseBox_option(tON) = {'C++ Rotary Treadmill'}; 
 ComputeMouseBox_cmd_string(tON) = {{'c++','config_rtm.yml'}};
 
-
+%% [9] MATLAB Reeler
+tON = tON + 1;
+ComputeMouseBox_option(tON) = {'MATLAB Reeler'};
+ComputeMouseBox_cmd_string(tON) = {'[bounding_box(:,:,1), cc, I_crop] =  computeMouseBox(Iaux,split_line);'};
+WeightSettings{tON} = weight_defaults;
 %%
 save([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'ComputeMouseBox_option','ComputeMouseBox_cmd_string','WeightSettings')
 clear('ComputeMouseBox_option','ComputeMouseBox_cmd_string','WeightSettings','tON','ParameterSet','weight_defaults','p_boundingBoxFunctions');
