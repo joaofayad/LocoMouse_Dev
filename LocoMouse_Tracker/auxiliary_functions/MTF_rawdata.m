@@ -153,7 +153,7 @@ flip = data.flip;
 
 parfor i_images = 1:N_frames
     % CODE TESTING [DE]
-    contrast_template = 'C:\Users\Dennis\Documents\DATA_DarkvsLight_Overground\Contrast_Template.mat';
+    contrast_template = []; % Development code should not be on master [joaofayad]
     [I,Iaux] = readMouseImage( ...
         vid,...
         i_images,...
@@ -232,12 +232,12 @@ tweight =  WS.WeightSettings{bb_choice};
 
 % Looping over all the images
 % warning('for changed to FOR for debugging reasons. [DE]')
-parfor i_images = 1:N_frames
+for i_images = 1:N_frames
 %% Reading images from video and preprocessing data:
     bounding_box_i = bounding_box(:,i_images);
     
     % CODE TESTING [DE]
-    contrast_template = 'C:\Users\Dennis\Documents\DATA_DarkvsLight_Overground\Contrast_Template.mat';
+    contrast_template = []; % Development code should not be on master [joaofayad]
     [~,Iaux] = readMouseImage( ...
         vid,...
         i_images,...
@@ -294,8 +294,13 @@ parfor i_images = 1:N_frames
             x_tail_cut = 1:l_x_cut-round(0.8*tail_x_threshold);
             
             % Croping the mouse:
-            [tracks_tail(:,:,i_images),tm] = tailDetectionFilter3(cellfun(@(x)(x(:,x_tail_cut)),I_cell,'un',0),Tmask, split_line,w_line,rho_line,N_tail_points);
+            if bb_choice == 10
+                 [tracks_tail(:,:,i_images),tm] = tailDetection_BasedOnSide(cellfun(@(x)(x(:,x_tail_cut)),I_cell,'un',0),Tmask, split_line,w_line,rho_line,N_tail_points);
+            else
+                [tracks_tail(:,:,i_images),tm] = tailDetectionFilter3(cellfun(@(x)(x(:,x_tail_cut)),I_cell,'un',0),Tmask, split_line,w_line,rho_line,N_tail_points);
+            end
             mask_i = cellfun(@(x,y)([x true(size(x,1),size(y,2)-size(x,2))]),tm,I_cell,'un',0);
+            
             tracks_tail(:,:,i_images) = bsxfun(@plus,tracks_tail(:,:,i_images),bsxfun(@max,OFFSET,zeros(3,1)));
         else
             mask_i{1} = true(size(I_cell{1}));
@@ -396,7 +401,7 @@ parfor i_images = 1:N_frames
                 
                 % CODE TESTING [DE]
                 %[~,Iaux2] = readMouseImage(vid,i_images-1,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
-                contrast_template = 'C:\Users\Dennis\Documents\DATA_DarkvsLight_Overground\Contrast_Template.mat';
+                contrast_template = []; % No experimental code on master [joaofayad]
                 [~,Iaux2] = readMouseImage( ...
                     vid,...
                     i_images-1,...
