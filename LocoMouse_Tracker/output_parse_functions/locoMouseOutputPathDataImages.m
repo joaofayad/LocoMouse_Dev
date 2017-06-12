@@ -1,4 +1,4 @@
-function [output_file_path_data,output_file_path_images] = LocoMouseOutputPathDataImages(output_path,vid_path)
+function [output_file_path_data,output_file_path_images] = locoMouseOutputPathDataImages(output_path,vid_path)
 % locoMouseOutputPathDataImages parses the video file name and returns
 % the path to the corresponding background according to the LocoMouse
 % system format. Assumes background is a PNG file.

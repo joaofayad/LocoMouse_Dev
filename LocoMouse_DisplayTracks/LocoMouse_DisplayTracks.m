@@ -78,7 +78,7 @@ handles.marker_choice(:,end) = 3;
 
 % Initializing the image:
 set(handles.axes1,'Units','Pixel');
-axes_size = get(handles.axes1,'Position');
+axes_size = round(get(handles.axes1,'Position'));
 handles.image = imshow(uint8(zeros(axes_size(4),axes_size(3))),'Parent',handles.axes1);
 set(handles.axes1,'Units','Normalized');
 
