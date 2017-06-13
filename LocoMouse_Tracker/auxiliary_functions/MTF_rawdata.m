@@ -1,4 +1,4 @@
-function [final_tracks,tracks_tail,data,debug] = MTF_rawdata(data, model,bb_choice)
+function [final_tracks,tracks_tail,data,debug] = MTF_rawdata(data, model,bb_choice, gui)
 % MTF   Tracks a set of predefined (mouse) features over a given video.
 %
 % INPUT:
@@ -152,6 +152,12 @@ disp(['(',tcmd_string,')']);
 flip = data.flip;
 
 parfor i_images = 1:N_frames
+    % Allows the GUI to halt any computations
+%     if ~gui.Compute()
+%         error('Tracking was Stoped by the user!');
+%     end
+    
+    
     % CODE TESTING [DE]
     contrast_template = []; % Development code should not be on master [joaofayad]
     [I,Iaux] = readMouseImage( ...
@@ -232,9 +238,14 @@ tweight =  WS.WeightSettings{bb_choice};
 
 % Looping over all the images
 % warning('for changed to FOR for debugging reasons. [DE]')
-for i_images = 1:N_frames
+parfor i_images = 1:N_frames
 %% Reading images from video and preprocessing data:
     bounding_box_i = bounding_box(:,i_images);
+   
+    % Allows the GUI to halt any computations
+%     if ~gui.Compute()
+%         error('Tracking was Stoped by the user!');
+%     end
     
     % CODE TESTING [DE]
     contrast_template = []; % Development code should not be on master [joaofayad]
