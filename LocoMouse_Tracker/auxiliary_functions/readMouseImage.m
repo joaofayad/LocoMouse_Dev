@@ -234,7 +234,8 @@ else
             error('Image is larger than expected!');
         end
         
-        ImgAux = gpuArray(uint8(zeros(size(ind_warp_mapping))));ImgAux(:) = Img(ind_warp_mapping(:));
+        ImgAux = uint8(zeros(size(ind_warp_mapping)));
+        ImgAux(:) = Img(ind_warp_mapping(:));
     else
         ImgAux = [];
     end
