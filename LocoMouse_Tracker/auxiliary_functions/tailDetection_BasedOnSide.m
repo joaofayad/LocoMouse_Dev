@@ -30,8 +30,8 @@ switch class(Ii)
 end
 clear I
 
-IT = (conv2(I_cell{2},w{2},'same')-rho{2}) > 0;
-IB = (conv2(I_cell{1},w{1},'same')-rho{1}) > 0;
+IT = (conv2(double(I_cell{2}),w{2},'same')-rho{2}) > 0;
+IB = (conv2(double(I_cell{1}),w{1},'same')-rho{1}) > 0;
 
 % Treatig the side view as the dominant view
 IT = imdilate(IT,strel('square',5));

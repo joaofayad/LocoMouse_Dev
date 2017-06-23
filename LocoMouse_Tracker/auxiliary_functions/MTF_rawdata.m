@@ -232,7 +232,7 @@ tweight =  WS.WeightSettings{bb_choice};
 
 % Looping over all the images
 % warning('for changed to FOR for debugging reasons. [DE]')
-for i_images = 1:N_frames
+parfor i_images = 1:N_frames
 %% Reading images from video and preprocessing data:
     bounding_box_i = bounding_box(:,i_images);
     
