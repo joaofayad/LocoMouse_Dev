@@ -78,7 +78,7 @@ handles.marker_choice(:,end) = 3;
 
 % Initializing the image:
 set(handles.axes1,'Units','Pixel');
-axes_size = get(handles.axes1,'Position');
+axes_size = round(get(handles.axes1,'Position'));
 handles.image = imshow(uint8(zeros(axes_size(4),axes_size(3))),'Parent',handles.axes1);
 set(handles.axes1,'Units','Normalized');
 
@@ -540,6 +540,7 @@ function menu_video_Callback(hObject, eventdata, handles)
 % hObject    handle to menu_video (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+fprintf('Not supported yet!\n')
 
 function menu_export_Callback(hObject, eventdata, handles)
 c_update_system_state = onCleanup(@()(displayImage([],[],handles)));
@@ -773,6 +774,10 @@ function menu_track_and_video_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 [file_name,path_name] = uigetfile({'*.mat','MAT-files (*.mat)'},'Choose a MAT-File from the LocoMouse_Tracker:',handles.latest_path,'MultiSelect','off');
 
+if ~ischar(file_name)
+    return;
+end
+
 D = load(fullfile(path_name,file_name));
 
 handles = loadVideo(handles,D.data.vid,D.data.flip);
@@ -788,13 +793,14 @@ function menu_locomouse_track_Callback(hObject, eventdata, handles)
 % hObject    handle to menu_locomouse_track (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+fprintf('Not supported yet!\n')
 
 % --------------------------------------------------------------------
 function menu_background_Callback(hObject, eventdata, handles)
 % hObject    handle to menu_background (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+fprintf('Not supported yet!\n')
 
 % ==== reset the gui
 function handles = resetGUI(handles)
