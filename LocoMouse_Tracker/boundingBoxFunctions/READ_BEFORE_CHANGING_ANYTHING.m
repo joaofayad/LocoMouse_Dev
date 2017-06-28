@@ -11,7 +11,8 @@
 %    example: BoundingBoxOptions_2015_11_16.mat for 16.11.2015
 % 
 % 2. create the function you want to implement in the path indicated by
-    [p_boundingBoxFunctions, ~, ~]=fileparts(which('computeMouseBox'));   
+    [p_boundingBoxFunctions, ~, ~]=fileparts(which('computeMouseBox'));  
+    
 % 3. copy and paste these lines to the end of this file and un-comment them:
     %     %% <OPTION DESCRIPTION AND AUTHOR INITIALS>
     %     tON = tON+1;
