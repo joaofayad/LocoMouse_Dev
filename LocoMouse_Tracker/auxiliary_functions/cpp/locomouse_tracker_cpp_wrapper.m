@@ -24,6 +24,14 @@ elseif flip
     char_flip = 'L';
 end
 
+if char_flip == 'L';
+    data.flip = true;
+elseif char_flip == 'R'
+    data.flip = false;
+else
+    error('Flip character is neither L nor R (found: %c)',char_flip);
+end
+
 % Running CPP code
 if ispc
     % This is needed to avoid the last backslash of the path to escape the
@@ -37,22 +45,22 @@ if result < 0
 end
 [~,vid_name,~] = fileparts(data.vid);
 output_file = fullfile(output_path,sprintf('output_%s.yml',vid_name));
-output = readOpenCVYAML(output_file);
+debug_file = fullfile(output_path,sprintf('debug_%s.yml',vid_name));
+
+[final_tracks_c, tracks_tail_c] = cppToMATLABTracks(output_file);
 delete(output_file);
-final_tracks_c = permute(cat(3,output.paw_tracks0,output.paw_tracks1,output.paw_tracks2,output.paw_tracks3,output.snout_tracks0),[2 3 1]);
-final_tracks_c(final_tracks_c(:)<0) = NaN;
-final_tracks_c = final_tracks_c + 1;
-if isfield(output,'tracks_tail')
-    tracks_tail_c = reshape(output.tracks_tail,3,15,[]);
-    tracks_tail_c(tracks_tail_c<0) = NaN;
-    tracks_tail_c = tracks_tail_c + 1;
-else
-    tracks_tail_c = NaN(3,1,size(final_tracks_c,3));
-end
-% FIXME: Make CPP code output the debug structures as well.
-%data = []; Need to adapt the export function to output all the relevant
-%parameters.
-debug = [];
+
+
+
+ if exist(debug_file,'file')
+%     
+%     debug = importLocoMouseYAML(debug_file);
+     delete(debug_file);
+ end
+%     
+% else
+    debug = [];
+% end
 
 function path = formatPathForCppCall(path)
 
@@ -76,12 +84,3 @@ end
 
 path = [path filesep filesep];
 return;
-
-
-    
-
-
-
-
-
-

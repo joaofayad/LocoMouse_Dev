@@ -40,10 +40,22 @@ function LocoMouse_Tracker_OpeningFcn(hObject, eventdata, handles, varargin)
 % Choose default command line output for LocoMouse_Tracker
 handles.output = hObject;
 
-% Initialising suppoted video files:
+%%% FIXME: 
+% Getting the install path for LocoMouseTracker:
+[handles.root_path,~,~] = fileparts([mfilename('fullpath'),'*.m']);
+
+handles.calibration_path = fullfile(handles.root_path,'calibration_files',filesep);
+handles.model_path = fullfile(handles.root_path,'model_files',filesep);
+handles.cpp_root_path = fullfile(handles.root_path,'auxiliary_functions','cpp',filesep);
+handles.background_parse_path = fullfile(handles.root_path,'background_parse_functions',filesep);
+handles.output_parse_path = fullfile(handles.root_path,'output_parse_functions',filesep);
+handles.bounding_box_path = fullfile(handles.root_path,'boundingBoxFunctions',filesep);
+
+% Initialising supported video files:
 sup_files = VideoReader.getFileFormats;
-handles.N_supported_files = size(sup_files,2)+1;
-handles.supported_files = cell(handles.N_supported_files,2);
+handles.N_supported_files = size(sup_files,2);
+handles.N_supported_files_menu = handles.N_supported_files+1;
+handles.supported_files = cell(handles.N_supported_files_menu,2);
 handles.supported_files(2:end,1) = cellfun(@(x)(['*.',x]),{sup_files(:).Extension},'un',false)';
 handles.supported_files(2:end,2) = {sup_files(:).Description};
 handles.supported_files{1,1} = cell2mat(cellfun(@(x)([x ';']),handles.supported_files(2:end,1)','un',false));
@@ -53,37 +65,14 @@ set(handles.figure1,'UserData','');
 % Getting the install path for LocoMouseTracker:
 [handles.root_path,~,~] = fileparts([mfilename('fullpath'),'*.m']);
 
+%%% FIXME: Encapsulate the pre-processing of such options into simpler
+%%% functions:
+
 % Reading background parsing modes:
-bkg_list = rdir(fullfile(handles.root_path,'background_parse_functions','*.m'),'',fullfile(handles.root_path,['background_parse_functions' filesep]) );
-bkg_list = strrep({bkg_list(:).name},'.m','');
-if isempty(bkg_list)
-    bkg_list = {''};
-end
-set(handles.popupmenu_background_mode,'String',bkg_list);clear bkg_list;
-
-% Reading output parsing modes:
-output_list = rdir(fullfile(handles.root_path,'output_parse_functions','*.m'),'',fullfile(handles.root_path,['output_parse_functions' filesep]));
-output_list = strrep({output_list(:).name},'.m','');
-if isempty(output_list)
-    output_list = {''};
-end
-set(handles.popupmenu_output_mode,'String',output_list);clear output_list
-
-% Reading calibration files:
-idx_list = rdir(fullfile(handles.root_path,'calibration_files','*.mat'),'',fullfile(handles.root_path,['calibration_files' filesep]));
-idx_list = strrep({idx_list(:).name},'.mat','');
-if isempty(idx_list)
-    idx_list = {''};
-end
-set(handles.popupmenu_calibration_files,'String',idx_list);clear idx_list
-
-% Reading model files:
-model_list = rdir(fullfile(handles.root_path,'model_files','*.mat'),'',fullfile(handles.root_path,['model_files' filesep]));
-model_list = strrep({model_list(:).name},'.mat','');
-if isempty(model_list)
-    model_list = {' '};
-end
-set(handles.popupmenu_model,'String',model_list);clear model_list
+readOptionList(fullfile(handles.root_path,'background_parse_functions'), '*.m', handles.popupmenu_background_mode);
+readOptionList(fullfile(handles.root_path,'output_parse_functions'), '*.m', handles.popupmenu_output_mode);
+readOptionList(fullfile(handles.root_path,'calibration_files'), '*.mat', handles.popupmenu_calibration_files);
+readOptionList(fullfile(handles.root_path,'model_files'), '*.mat', handles.popupmenu_model);
 
 % Initializing the output folder to the current path:
 set(handles.edit_output_path,'String',pwd);
@@ -121,13 +110,9 @@ handles.disable_while_running = get(handles.figure1,'Children');
 % Making sure any ctrl+c deletes the gui to prevent further malfunctioning:
 setappdata(handles.figure1,'current_search_path',pwd);
 
-% Update handles structure
-guidata(hObject, handles);
-
 set(handles.figure1,'CloseRequestFcn',@LocoMouse_closeRequestFcn);
 
 % Loading latest settings
-
 [LMT_path,~,~] = fileparts(which('LocoMouse_Tracker'));
 LMT_path = [LMT_path filesep 'GUI_Settings'];
 if exist(LMT_path,'dir')==7
@@ -136,17 +121,45 @@ if exist(LMT_path,'dir')==7
     end
 end
 
+% Update handles structure
+guidata(hObject, handles);
+
 % UIWAIT makes LocoMouse_Tracker wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
 
-function LocoMouse_closeRequestFcn(hObject, eventdata)
+%--- Reading popup-menu list options:
+function [] = readOptionList(option_path, file_search_stem, menu_handle)
+
+if option_path(end) ~= filesep
+    option_path = cat(2,option_path,filesep);
+end
+
+% Reading background parsing modes:
+file_list = rdir(fullfile(option_path,file_search_stem),'',option_path);
+[~,~,ext] = fileparts(file_search_stem);
+file_list = strrep({file_list(:).name},ext,'');
+
+if isempty(file_list)
+    file_list = {''};
+end
+set(menu_handle,'String',file_list);clear bkg_list;
+
+
+% --- Template to handle errors:
+function [] = ErrorMsg(error_struct, error_message)
+fprintf(error_message);
+error_report = getReport(error_struct,'extended');
+disp(error_report);
+% waitForProcess(handles,'on');
+
+
+% --- Function to execute when closing LocoMouse_Tracker:
+function [] = LocoMouse_closeRequestFcn(hObject, eventdata)
 handles = guidata(gcbo);
 try
-SaveSettings_Callback(hObject, eventdata, handles, 'GUI_Recovery_Settings.mat')
+    SaveSettings_Callback(hObject, eventdata, handles, 'GUI_Recovery_Settings.mat')
 catch error_close_gui
-    error_report = getReport(error_close_gui,'extended');
-    fprintf('Error closing GUI. Could not save settings.\n');
-    disp(error_report);
+    ErrorMsg(error_close_gui, 'Error closing GUI. Could not save settings.\n');
 end
 delete(gcbo)
 
@@ -183,49 +196,94 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
+% --- Adds a video file to the list of files to track
+function [handles, success] = addVideoFiles(handles, file_list)
+
+N_files_in = size(file_list,1);
+success = true(1,N_files_in);
+
+for i_files = 1:N_files_in
+    try
+        fname = strtrim(file_list(i_files,:));
+        vid = VideoReader(fname);
+        drawnow;
+        clear vid
+        
+    catch error_open_file
+        
+        success(i_files) = false;
+        ErrorMsg(error_open_file,sprintf('LocoMouse_Tracker Error: Failed to add Video File %s.\nMATLAB Error Report:\n', fname));
+        
+    end
+end
+
+% Add files to listbox:
+if ~any(success)
+    fprintf('Could not add any video files!\n');
+    return;
+end
+
+file_list = file_list(success,:);
+
+current_file_list = get(handles.listbox_files,'String');
+current_file_list = cat(1,current_file_list,{file_list});
+set(handles.listbox_files,'String',current_file_list);
+set(handles.listbox_files,'Value',length(current_file_list));
+
+fprintf('Added %d out of %d found video files.\n',sum(success),N_files_in);
+
+% --- Add a Video Directory:
+function handles = addVideoDir(handles, chosen_dir, search_subdirs)
+
+% List all supported video files in such dir:
+file_list = cell(handles.N_supported_files,1);
+keep_file_type = true(1,handles.N_supported_files);
+
+if search_subdirs
+    chosen_dir = fullfile(chosen_dir,'**');
+end
+
+% Starts at 2 since 1 is all files:
+for i_f = 1:handles.N_supported_files
+    d = rdir(fullfile(chosen_dir,handles.supported_files{i_f + 1}));d = {d(:).name};
+    file_list{i_f} = char(d'); clear d
+    keep_file_type(i_f) = ~isempty(file_list{i_f});
+end
+
+if ~any(keep_file_type)
+    fprintf('No supported files found in %s.\n', chosen_dir);
+    return;
+end
+
+file_list = char(file_list(keep_file_type,:));
+
+% Adding the video files:
+[handles,success] = addVideoFiles(handles, file_list);
+
 
 % --- Executes on button press in pushbutton_add_file.
 function pushbutton_add_file_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton_add_file (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-current_search_path = getappdata(handles.figure1,'current_search_path');
-[chosen_file,chosen_path] = uigetfile(handles.supported_files,'Choose supported video file',current_search_path);
-chosen_fullfile = fullfile(chosen_path,chosen_file);
+values = waitForProcess(handles,'off');
 
-if ischar(chosen_file)
-    setappdata(handles.figure1,'current_search_path',chosen_path);
-    values = waitForProcess(handles,'off');
-    % Valid file selection.
+try
+    current_search_path = getappdata(handles.figure1,'current_search_path');
+    [chosen_file,chosen_path] = uigetfile(handles.supported_files,'Choose supported video file',current_search_path);
     
-    % Search for repetitions:
-    %%% FIXME: See how this was done in other GUIs
-    
-    % Try to read the file with video reader:
-    try
-        vid = VideoReader(chosen_fullfile);
-        drawnow;
-        clear vid
-        waitForProcess(handles,'on',values);
-    catch
-        %%% Play error sound and write error message on log box!
-        %        updateLog(handles.listbox_log,'Error: Could not open %s with VideoReader','r');
-        fprintf('Error: Could not open %s with VideoReader!\n',chosen_fullfile);
-        waitForProcess(handles,'on',values);
-        return;
+    if ischar(chosen_file)
+        setappdata(handles.figure1,'current_search_path',chosen_path);
+        file_path = fullfile(chosen_path,chosen_file);
+        handles = addVideoFiles(handles, file_path);
     end
     
-    % Add file to file listbox:
-    current_file_list = get(handles.listbox_files,'String');
-    N_files = size(current_file_list,1);
-    if N_files == 0
-        handles = changeGUIEnableStatus(handles,'on');
-    end
-    current_file_list = cat(1,current_file_list,{chosen_fullfile});
-    set(handles.listbox_files,'String',current_file_list);
-    set(handles.listbox_files,'Value',length(current_file_list));
-    clear current_file_list
+catch error_struct
+    ErrorMsg(error_struct,sprintf('Failed to add video %s', file_path));
 end
+
+waitForProcess(handles,'on',values);
+guidata(hObject,handles);
 
 
 % --- Executes on button press in pushbutton_add_folder.
@@ -234,66 +292,30 @@ function pushbutton_add_folder_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % Valid file selection.
-current_search_path = getappdata(handles.figure1,'current_search_path');
-chosen_dir = uigetdir(current_search_path,'Choose directory with supported video files');
-setappdata(handles.figure1,'current_search_path',current_search_path);
 
-if ischar(chosen_dir)% Valid dir selection.
-    values = waitForProcess(handles,'off');
-    % List all supported video files in such dir:
-    file_list = cell(handles.N_supported_files,1);
-    isempty_file_type = true(1,handles.N_supported_files);
+% Disable the GUI:
+values = waitForProcess(handles,'off');
+
+try
     
-    % Starts at 2 since 1 is all files:
-    for i_f = 2:handles.N_supported_files
-        file_list{i_f} = getDataList(fullfile(chosen_dir,handles.supported_files{i_f}));
-        isempty_file_type(i_f) = isempty(file_list{i_f});
+    current_search_path = getappdata(handles.figure1,'current_search_path');
+    chosen_dir = uigetdir(current_search_path,'Choose directory with supported video files');
+    
+    if ischar(chosen_dir)% Valid dir selection.
+        setappdata(handles.figure1,'current_search_path',current_search_path);
+        handles = addVideoDir(handles, chosen_dir, false);
     end
-    if ~all(isempty_file_type)
-        file_list = char(file_list(~isempty_file_type));
-        N_candidate_files = size(file_list,1);
-        kp = true(1,N_candidate_files);
-        
-        % Search for repetitions:
-        %%% FIXME: See how this was done in other GUIs
-        
-        % Try to read the file with video reader:
-        for i_f = 1:N_candidate_files
-            file_name_f = strtrim(file_list(i_f,:));
-            try
-                vid = VideoReader(file_name_f);
-                clear vid
-                %                 fprintf('%s added successfully.\n',file_name_f);
-            catch
-                %%% Play error sound and write error message on log box!
-                %        updateLog(handles.listbox_log,'Error: Could not open %s with VideoReader','r');
-                fprintf('Error: Could not open %s with VideoReader!\n',file_name_f);
-                kp(i_f) = false;
-            end
-        end
-        file_list = file_list(kp,:);
-        waitForProcess(handles,'on',values);
-        if ~isempty(file_list)
-            % Add file to file listbox:
-            current_file_list = get(handles.listbox_files,'String');
-            if size(current_file_list,1) == 0
-                handles = changeGUIEnableStatus(handles,'on');
-            end
-            
-            current_file_list = cat(1,current_file_list,file_list);
-            set(handles.listbox_files,'String',current_file_list);
-            set(handles.listbox_files,'Value',size(current_file_list,1));
-            clear current_file_list file_list
-            
-            
-        else
-            fprintf('No supported video files found!\n');
-        end
-    else
-        fprintf('No supported video files found!\n');
-    end
+    
+catch error_structure
+
+    ErrorMsg(error_structure, sprintf('Failed to add videos on dir %s', chosen_dir));
+    
 end
+
+% Enable the GUI:
+waitForProcess(handles,'on',values);
 guidata(handles.figure1,handles);
+
 
 % --- Executes on button press in pushbutton_add_with_subfolders.
 function pushbutton_add_with_subfolders_Callback(hObject, eventdata, handles)
@@ -301,43 +323,29 @@ function pushbutton_add_with_subfolders_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-chosen_dir = uigetdir('','Choose directory with supported video files');
+% Disable the GUI:
+values = waitForProcess(handles,'off');
 
-if ischar(chosen_dir)
-    file_list = cell(handles.N_supported_files,1);
-    kp_f = true(handles.N_supported_files,1);
-    for i_f = 1:handles.N_supported_files
-        d = rdir(fullfile(chosen_dir,'**',handles.supported_files{i_f}));d = {d(:).name};
-        file_list{i_f} = char(d'); clear d
-        N_candidate_files = size(file_list{i_f},1);
-        fprintf('%d %s files found\n',N_candidate_files,handles.supported_files{i_f});
-        kp_ff = true(1,N_candidate_files);
-        for i_ff = 1:N_candidate_files
-            file_name_ff = strtrim(strtrim(file_list{i_f}(i_ff,:)));
-            try
-                vid = VideoReader(file_name_ff);
-                clear vid
-                % fprintf('%s added successfully.\n',file_name_ff);
-            catch
-                %%% Play error sound and write error message on log box!
-                %        updateLog(handles.listbox_log,'Error: Could not open %s with VideoReader','r');
-                fprintf('Error: Could not open %s with VideoReader!\n',file_name_ff);
-                kp_ff(i_ff) = false;
-            end
-        end
-        file_list{i_f} = file_list{i_f}(kp_ff,:);
-        if isempty(file_list{i_f})
-            kp_f(i_f) = false;
-        end
+try
+    
+    current_search_path = getappdata(handles.figure1,'current_search_path');
+    chosen_dir = uigetdir(current_search_path,'Choose directory with supported video files');
+    
+    if ischar(chosen_dir)% Valid dir selection.
+        setappdata(handles.figure1,'current_search_path',current_search_path);
+        handles = addVideoDir(handles, chosen_dir, true);
     end
-    file_list = char(file_list(kp_f));
-    current_list = get(handles.listbox_files,'String');
-    if (isempty(current_list)) && (~isempty(file_list) > 0)
-        handles = changeGUIEnableStatus(handles,'on');
-    end
-    set(handles.listbox_files,'String',cat(1,current_list,{file_list}));
+    
+catch error_structure
+
+    ErrorMsg(error_structure, sprintf('Failed to add videos on dir %s', chosen_dir));
+    
 end
+
+% Enable the GUI:
+waitForProcess(handles,'on',values);
 guidata(handles.figure1,handles);
+
 
 % --- Executes on selection change in popupmenu_output_mode.
 function popupmenu_output_mode_Callback(hObject, eventdata, handles)
@@ -432,12 +440,12 @@ Nfiles = size(file_list,1);
 % Calibration file;
 calibration_file_pos = get(handles.popupmenu_calibration_files,'Value');
 calibration_file = get(handles.popupmenu_calibration_files,'String');calibration_file = calibration_file{calibration_file_pos};
-handles = loadCalibrationFile(fullfile(handles.root_path,'calibration_files',[calibration_file '.mat']),handles);
+handles = loadCalibrationFile(fullfile(handles.calibration_path,[calibration_file '.mat']),handles);
 
 % Model file:
 model_file_pos = get(handles.popupmenu_model,'Value');
 model_file = get(handles.popupmenu_model,'String');model_file = model_file{model_file_pos};
-handles = loadModel(fullfile(handles.root_path,'model_files',[model_file '.mat']),handles);
+handles = loadModel(fullfile(handles.model_path,[model_file '.mat']),handles);
 
 % Output and background functions:
 bkg_mode = get(handles.popupmenu_background_mode,'Value');
@@ -462,11 +470,11 @@ total_time = tic;
 
 % Checking if running C++ code: [joaofayad]
 bb_choice = get(handles.BoundingBox_choice,'Value');
-[p_boundingBoxFunctions, ~, ~]=fileparts(which('computeMouseBox')); % find the folder containing BoundingBoxOptions.mat
+[p_boundingBoxFunctions, ~, ~] = fileparts(which('computeMouseBox')); % find the folder containing BoundingBoxOptions.mat
 load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'ComputeMouseBox_cmd_string','ComputeMouseBox_option'); % load bounding box option information
 if iscell(ComputeMouseBox_cmd_string{bb_choice})
     cpp = true;
-    cpp_config_file = fullfile(handles.root_path,'auxiliary_functions','cpp',ComputeMouseBox_cmd_string{bb_choice}{2});
+    cpp_config_file = fullfile(handles.cpp_root_path,ComputeMouseBox_cmd_string{bb_choice}{2});
 else
     cpp = false;
 end
@@ -506,13 +514,14 @@ else
         successful_tracking(i_files) = track_MATLB_CPP(handles.data,handles.model,model_file,calibration_file, handles.root_path,file_name, output_fun, output_path, bkg_fun, handles.checkbox_overwrite_results,  handles.checkbox_ExpFigures.Value, handles.BoundingBox_choice.Value, cpp, '');
     end
 end
+
 fprintf('%d out of %d files correctly processed.\n',sum(successful_tracking),Nfiles);
 fprintf('Total run time: ');
 disp(datestr(datenum(0,0,0,0,0,toc(total_time)),'HH:MM:SS'))
 disp('------------------[Tracking END]----');
 set(handles.disable_with_start,'Enable','on');
 set(handles.enable_with_start,'Enable','off');
-                                                                                                    
+
 function successful_tracking = track_MATLB_CPP(data, model,model_file, calibration_file, root_path, file_name,output_fun, output_path, bkg_fun, checkbox_overwrite_results,export_figures,bounding_box_choice,cpp,cpp_config_file)
 try
     successful_tracking = true;
@@ -543,11 +552,11 @@ try
         end
         
         % Attempting to track:
-            current_file_time = tic;
-            fprintf('Tracking %s ...\n',file_name)
-            data.bkg = bkg_file;
-            data.vid = file_name;
-               
+        current_file_time = tic;
+        fprintf('Tracking %s ...\n',file_name)
+        data.bkg = bkg_file;
+        data.vid = file_name;
+        
         if cpp
             if ispc
                 cpp_exect = fullfile(root_path,'auxiliary_functions','cpp','Locomouse.exe');
@@ -556,10 +565,10 @@ try
             else
                 error('Only windows is supported so far. Compile the C++ code in the current platform and insert the call here.');
             end
-         else
+        else
             [final_tracks_c,tracks_tail_c,data,debug] = MTF_rawdata(data, model, bounding_box_choice);
         end
-       
+        
         [final_tracks,tracks_tail] = convertTracksToUnconstrainedView(final_tracks_c,tracks_tail_c,size(data.ind_warp_mapping),data.ind_warp_mapping,data.flip,data.scale);
         
         % Saving tracking data:
@@ -578,7 +587,7 @@ try
         disp('Done. Elapsed time: ')
         disp(datestr(datenum(0,0,0,0,0,toc(current_file_time)),'HH:MM:SS'));
         disp('----------------------');
-     else
+    else
         fprintf('%s has already been tracked. To re-track check the "Overwrite existing results" box.\n',file_name);
     end
 catch tracking_error
@@ -713,7 +722,7 @@ try
     else
         if tfoundfield(3) && ~tfoundfield(4)
             data.split_line = data.mirror_line;
-            fprintf('WARNING: Outdated fieldname "mirror_line" should be renamed to "split_line".')
+            fprintf('WARNING: Outdated fieldname "mirror_line" should be renamed to "split_line".\n')
             disp(full_file_path);
         end
         if ~isfield(data,'scale')
@@ -724,7 +733,7 @@ try
     
 catch load_error
     fprintf('Error: Could not load %s with MATLAB.\n',full_file_path);
-    disp(getReport(load_error.message,'extended'));
+    disp(getReport(load_error,'extended'));
     beep;
 end
 % Setting the old or new string according to how the computations went:
@@ -806,7 +815,7 @@ if ischar(load_file)
         warning('%s is already on the model list!\n',fname);
     else
         file_path = fullfile(load_path, load_file);
-        db_file_path = fullfile(handles.root_path,'model_files',load_file);
+        db_file_path = fullfile(handles.model_path,load_file);
         succ = copyfile(file_path,db_file_path);
         if ~succ
             error('Could not copy %s to local folder!\n',file_path)
@@ -869,7 +878,7 @@ if ischar(load_file)
         warning('%s is already on the model list!\n',fname);
     else
         file_path = fullfile(load_path, load_file);
-        db_file_path = fullfile(handles.root_path,'calibration_files',load_file);
+        db_file_path = fullfile(handles.calibration_path,load_file);
         succ = copyfile(file_path,db_file_path);
         if ~succ
             error('Could not copy %s to local folder!\n',file_path)
@@ -908,7 +917,9 @@ switch state
         error('Unknown option!');
 end
 
-
+if ~isempty(get(handles.listbox_files,'String'))
+    changeGUIEnableStatus(handles,'on');
+end
 
 % --- Executes on selection change in MouseOrientation.
 function MouseOrientation_Callback(hObject, eventdata, handles)
@@ -1012,180 +1023,58 @@ function pushbutton_cluster_Callback(hObject, eventdata, handles)
 %%FIXME: Check how to make sure whe have access to the cluster on the
 %%current machine.
 
-%%FIXME: Where could we configure the cluster folders?
-locomouse_cpp_cluster_root = '/mirror/LocoMouse_cpp';
-locomouse_cpp_models = fullfile(locomouse_cpp_cluster_root, 'model_files');
-locomouse_cpp_calibration = fullfile(locomouse_cpp_cluster_root, 'calibration_files');
-locomouse_cpp_config = fullfile(locomouse_cpp_cluster_root, 'configuration_files');
-job_name = 'test_cluster_job';
-
-if ~exist('/mirror/','dir')
-%     error('Could not find the /mirror/ directory. Exporting to the cluster must be done from the cluster master node only!');
-end
-file_list = get(handles.listbox_files,'String');
-
-% Calibration file;
-calibration_file_pos = get(handles.popupmenu_calibration_files,'Value');
-calibration_file = get(handles.popupmenu_calibration_files,'String');
-calibration_file = calibration_file{calibration_file_pos};
-
-% Model file:
-model_file_pos = get(handles.popupmenu_model,'Value');
-model_file = get(handles.popupmenu_model,'String');
-model_file = model_file{model_file_pos};
-
-model_file_yml = fullfile(locomouse_cpp_models,[model_file '.yml']);
-calibration_file_yml = fullfile(locomouse_cpp_calibration, [calibration_file '.yml']);
-
-if ~exist(model_file_yml,'file')
-    model_file_yml_matlab = fullfile(handles.root_path,'model_files',[model_file '.yml']);
-    if exist(model_file_yml_matlab,'file')
-        success = copyfile(model_file_yml_matlab,model_file_yml);
-        if ~success
-%             error('Error copying model yml file. Check for writing permissions!');
-        end
-    else
-        handles = loadModel(fullfile(handles.root_path,'model_files',[model_file '.mat']),handles);
-        exportLocoMouseModelToOpenCV(model_file_yml,handles.model);
-    end
+if ~isunix
+    error('LocoMouse_Tracker supports sending jobs to a OpenLava framework running on Linux only. For more details see the documentation.');
 end
 
-if ~exist(calibration_file_yml,'file')
-    calibration_file_yml_matlab = fullfile(handles.root_path,'calibration_files',[calibration_file '.yml']);
+% FIXME: OpenLava Server configurations should be performed in some config
+% file.
+cluster_opts.root = '/mirror/LocoMouse';
+cluster_opts.mirror_folder = '/mirror';
+cluster_opts.job_name = 'test_cluster_job';
+cluster_opts.models = fullfile(cluster_opts.root, 'model_files');
+cluster_opts.calibration = fullfile(cluster_opts.root, 'configuration_files');
+cluster_opts.config = fullfile(cluster_opts.root, 'calibration_files');
+cluster_opts.job_path = fullfile(cluster_opts.root,cluster_opts.job_name);
 
-    if exist(calibration_file_yml_matlab,'file')
-        success = copyfile(calibration_file_yml_matlab,calibration_file_yml);
-        if ~success
-%             error('Error copying calibration yml file. Check for writing permissions!');
-        end
-    else
-        handles = loadCalibrationFile(fullfile(handles.root_path,'calibration_files',[calibration_file '.mat']),handles);
-        
-        % Check for compatibility:
-        rm_list = {'vid','bkg','flip'};
-        data = handles.data;
-        for i_data = 1:length(rm_list)
-            if isfield(data,rm_list{i_data})
-            data = rm(data,rm_list{i_data});
-            end
-        end
-        exportLocoMouseCalibToOpenCV(calibration_file_yml,data);
-    end
+if ~exist(cluster_opts.job_path,'dir')
+    mkdir(cluster_opts.job_path);
 end
 
-% Output and background functions:
-bkg_mode = get(handles.popupmenu_background_mode,'Value');
-output_mode = get(handles.popupmenu_output_mode,'Value');
-
-bkg_fun = get(handles.popupmenu_background_mode,'String');
-bkg_fun = bkg_fun{bkg_mode};
-
-output_fun = get(handles.popupmenu_output_mode,'String');
-output_fun = output_fun{output_mode};
-
-% Reading output path:
-output_path = get(handles.edit_output_path,'String');
-
-% Checking which side the mouse faces:
-switch handles.MouseOrientation.Value
-    case 2
-        flip_char = 'LR';
-    case 3
-        flip_char = 'R';
-    case 4
-        flip_char = 'L';
+if ~exist(cluster_opts.mirror_folder,'dir')
+    error('Could not find "/mirror". LocoMouse_Tracker expects an OpenLava installation with a particular configuration. For more details see the documentation.');
 end
 
-% Checking C++ locomouse mode: [joaofayad]
-bb_choice = get(handles.BoundingBox_choice,'Value');
-[p_boundingBoxFunctions, ~, ~]=fileparts(which('computeMouseBox')); % find the folder containing BoundingBoxOptions.mat
-load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'ComputeMouseBox_cmd_string','ComputeMouseBox_option'); % load bounding box option information
-if iscell(ComputeMouseBox_cmd_string{bb_choice})
-    cpp_config_file = fullfile(locomouse_cpp_config,ComputeMouseBox_cmd_string{bb_choice}{2});
-else
-    error('The cluster can only run the C++ version of the code.');
-end
+GUI_STATUS = readGUIStatus(handles);
 
+% FIXME: Implement function that makes all the model, calib, and config
+% files available to the cluster.
+job_file = prepareCluster(handles, cluster_opts, GUI_STATUS);
+
+N_files = size(GUI_STATUS.video_list,1);
+
+% Submit the job array:
 disp('----------------[Submitting job to cluster]----');
+if N_files == 1
+    system(sprintf('bsub < %s',job_file));
+else
+    system(sprintf('bsub -J "LocoMouse_Tracker[%d-%d]" < %s',1,N_files,job_file));
+end
+
 SaveSettings_Callback(hObject, eventdata, handles, 'GUI_Recovery_Settings.mat');
-
-% Create a job
-openLavaJobArray(locomouse_cpp_cluster_root, job_name, file_list, bkg_fun, flip_char, cpp_config_file, model_file_yml, calibration_file_yml, output_path);
-
-function [] = openLavaJobArray(locomouse_cpp_cluster_root, job_name, file_list, bkg_fun, flip_char, config_file, model_file, calibration_file, output_path)
-
-% Generate a file with the videos
-[video_files, bkg_files, side_chars] = filesForOpenLavaJob(locomouse_cpp_cluster_root, job_name, file_list, bkg_fun, flip_char);
-
-job_name_no_ext = fullfile(locomouse_cpp_cluster_root,job_name,job_name);
-
-job_fid = fopen(sprintf('%s.job',job_name_no_ext),'w');
-
-if job_fid < 0 
-    error('Could not create .job file. Check writing permissions!');
-end
-
-fprintf(job_fid,'#BSUB -o %s.out\n',job_name_no_ext);
-fprintf(job_fid,'#BSUB -e %s.err\n',job_name_no_ext);
-fprintf(job_fid,'#!/bin/bash\n');
-fprintf(job_fid,'#echo $LSB_JOBINDEX\n');
-fprintf(job_fid,'file_name=$(sed "${LSB_JOBINDEX}q;d" %s)\n',video_files);
-fprintf(job_fid,'bkg_name=$(sed "${LSB_JOBINDEX}q;d" %s)\n', bkg_files);
-fprintf(job_fid,'side_char=$(sed "${LSB_JOBINDEX}q;d" %s)\n',side_chars);
-fprintf(job_fid,'echo "$file_name"\n');
-fprintf(job_fid,'"%s" "%s" "${file_name}" "${bkg_name}" "%s" "%s" "${side_char}" "%s"\n',fullfile(locomouse_cpp_cluster_root,'LocoMouse'),config_file,model_file,calibration_file, output_path);
-
-
-%%% Printing files necessary for cluster job
-function [video_files, bkg_files, side_chars] = filesForOpenLavaJob(locomouse_cpp_cluster_root, job_name, file_list, bkg_fun, char_flip)
-%time = fix(clock);
-job_dir = fullfile(locomouse_cpp_cluster_root,job_name);
-if ~exist(job_dir,'dir')
-    mkdir(job_dir);
-end
-
-video_files = fullfile(job_dir,sprintf('%s_video_list',job_name));
-bkg_files = fullfile(job_dir,sprintf('%s_bkg_list',job_name));
-side_chars = fullfile(job_dir,sprintf('%s_side_list',job_name));
-
-videos_fid = fopen(video_files,'w');
-bkg_fid = fopen(bkg_files,'w');
-side_fid = fopen(side_chars,'w');
-
-if any([videos_fid, bkg_fid, side_fid] < 0)
-    error('Could not create the auxiliary files for the openlava job. Check writing permissions!');
-end
-
-cleanfid = onCleanup(@()(fclose(videos_fid)));
-cleanfid2 = onCleanup(@()(fclose(bkg_fid)));
-cleanfid3 = onCleanup(@()(fclose(side_fid)));
-
-for i_files = 1:size(file_list,1)
-    
-    file_name = strtrim(file_list{i_files});
-    
-    fprintf(videos_fid,[file_name '\n']);
-    fprintf(bkg_fid,[feval(bkg_fun,file_name) '\n']);
-    % Compute side from file name:
-    if length(char_flip) > 1
-        fprintf(side_fid,[file_name(end-4) '\n']);
-    else
-        fprintf(side_fid,[char_flip '\n']);
-    end
-end
 
 % --- Executes on button press in pushbutton_cluster_output.
 function pushbutton_cluster_output_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton_cluster_output (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-try
+%%% FIXME: WTF is this function?
 
 % Calibration file;
 calibration_file_pos = get(handles.popupmenu_calibration_files,'Value');
 calibration_file = get(handles.popupmenu_calibration_files,'String');
 calibration_file = calibration_file{calibration_file_pos};
-handles = loadCalibrationFile(fullfile(handles.root_path,'calibration_files',[calibration_file '.mat']),handles);
+handles = loadCalibrationFile(fullfile(handles.calibration_path,[calibration_file '.mat']),handles);
 
 % 
 % % Model file:
@@ -1198,26 +1087,295 @@ output_fun = get(handles.popupmenu_output_mode,'String');
 output_mode = get(handles.popupmenu_output_mode,'Value');
 output_fun = output_fun{output_mode};
 
-% Reading output path:
-output_path = get(handles.edit_output_path,'String');
+if ~exist(model_file_yml,'file')
+    model_file_yml_matlab = fullfile(handles.root_path,'model_files',[model_file '.yml']);
+    if exist(model_file_yml_matlab,'file')
+        success = copyfile(model_file_yml_matlab,model_file_yml);
+        if ~success
+            %             error('Error copying model yml file. Check for writing permissions!');
+        end
+    else
+        handles = loadModel(fullfile(handles.root_path,'model_files',[model_file '.mat']),handles);
+        exportLocoMouseModelToOpenCV(model_file_yml,handles.model);
+    end
+end
 
-file_list = get(handles.listbox_files,'String');
+if ~exist(calibration_file_yml,'file')
+    calibration_file_yml_matlab = fullfile(handles.root_path,'calibration_files',[calibration_file '.yml']);
+    
+    if exist(calibration_file_yml_matlab,'file')
+        success = copyfile(calibration_file_yml_matlab,calibration_file_yml);
+        if ~success
+            %             error('Error copying calibration yml file. Check for writing permissions!');
+        end
+    else
+        handles = loadCalibrationFile(fullfile(handles.root_path,'calibration_files',[calibration_file '.mat']),handles);
+        
+        % Check for compatibility:
+        rm_list = {'vid','bkg','flip'};
+        data = handles.data;
+        for i_data = 1:length(rm_list)
+            if isfield(data,rm_list{i_data})
+                data = rm(data,rm_list{i_data});
+            end
+        end
+        exportLocoMouseCalibToOpenCV(calibration_file_yml,data);
+    end
 
+end
+
+% =========
+function GUI_STATUS = readGUIStatus(handles)
+
+% FIXME: This check should also be done with a function from handles...
+% Checking C++ locomouse mode: [joaofayad]
+bb_choice = get(handles.BoundingBox_choice,'Value');
+[p_boundingBoxFunctions, ~, ~] = fileparts(which('computeMouseBox')); % find the folder containing BoundingBoxOptions.mat
+load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'ComputeMouseBox_cmd_string','ComputeMouseBox_option'); % load bounding box option information
+
+bb_options = load(fullfile(handles.bounding_box_path,'BoundingBoxOptions.mat'),'ComputeMouseBox_cmd_string','ComputeMouseBox_option');
+
+if iscell(bb_options.ComputeMouseBox_cmd_string{bb_choice})
+    cpp_config_file = fullfile(handles.cpp_root_path, bb_options.ComputeMouseBox_cmd_string{bb_choice}{2});
+else
+    
+    error('The cluster can only run the C++ version of the code.');
+end
+
+bkg_mode = get(handles.popupmenu_background_mode,'Value');
+bkg_fun = get(handles.popupmenu_background_mode,'String');
+
+output_mode = get(handles.popupmenu_output_mode,'Value');
+output_fun = get(handles.popupmenu_output_mode,'String');
+
+%%% FIXME: Implement a function to compute this on handles somewhere
 % Checking which side the mouse faces:
 switch handles.MouseOrientation.Value
     case 2
-        handles.data.flip = 'LR';
+        flip_char = 'LR';
     case 3
-        handles.data.flip = false;
+        flip_char = 'R';
     case 4
-        handles.data.flip = true;
+        flip_char = 'L';
 end
 
-convertOutputCPPtoMATLAB(file_list, handles.data, output_fun, output_path);
+% Calibration file;
+calibration_file_pos = get(handles.popupmenu_calibration_files,'Value');
+calibration_file = get(handles.popupmenu_calibration_files,'String');
+calibration_file = calibration_file{calibration_file_pos};
 
-catch error_output_cluster
-    error_report = getReport(error_output_cluster,'extended');
-    fprintf('Error post-processing cluster result.\n');
-    disp(error_report);
+% Model file:
+model_file_pos = get(handles.popupmenu_model,'Value');
+model_file = get(handles.popupmenu_model,'String');
+model_file = model_file{model_file_pos};
+
+
+GUI_STATUS.cpp_config_file = cpp_config_file; 
+GUI_STATUS.background_function = bkg_fun{bkg_mode};
+GUI_STATUS.output_function = output_fun{output_mode};
+GUI_STATUS.output_path = get(handles.edit_output_path,'String');
+GUI_STATUS.flip_char = flip_char;
+GUI_STATUS.model_file.mat = fullfile(handles.model_path,[model_file '.mat']);
+GUI_STATUS.model_file.yml = fullfile(handles.model_path,[model_file '.yml']);
+GUI_STATUS.calibration_file.mat = fullfile(handles.calibration_path, [calibration_file '.mat']);
+GUI_STATUS.calibration_file.yml = fullfile(handles.calibration_path, [calibration_file '.yml']);
+GUI_STATUS.video_list = get(handles.listbox_files,'String');
+
+%%% FIXME: Make the mouse option a function of the file name in other
+%%% places of the code.
+if length(flip_char) > 1
+    GUI_STATUS.flip_function = @(file_name)(file_name(find(file_name == '.',1,'last') - 1));
+else
+    GUI_STATUS.flip_function = [];
 end
+
+function job_file = prepareCluster(handles, cluster_opts, GUI_STATUS)
+% Copy yml files to the cluster folders so it is accessible to all workers:
+
+% Check if one needs to convert files to yml:
+if ~exist(GUI_STATUS.model_file.yml,'file')
+    exportLocoMouseModelToOpenCV(GUI_STATUS.model_file.yml,load(GUI_STATUS.model_file.mat));
+end
+
+if ~exist(GUI_STATUS.calibration_file.yml,'file')
+    exportLocoMouseCalibToOpenCV(GUI_STATUS.calibration_file.yml,load(GUI_STATUS.calibration_file.mat));
+end
+
+files_to_copy = {GUI_STATUS.calibration_file.yml, GUI_STATUS.model_file.yml, GUI_STATUS.cpp_config_file};
+field_list = {'calibration', 'models', 'config'};
+destination_folders = {cluster_opts.calibration, cluster_opts.models, cluster_opts.config};
+
+for i_files = 1:3
+    
+    success = copyfile(files_to_copy{i_files}, destination_folders{i_files});
+    
+    if success < 0
+        error('Failed to copy configuration file %s file to cluster folder %s',files_to_copy{i_files}, destination_folders{i_files});
+    end
+    
+    [~,fname,ext] = fileparts(files_to_copy{i_files});
+    cluster_opts.(sprintf('%s_cluster_file_path',field_list{i_files})) = fullfile(cluster_opts.(field_list{i_files}),[fname ext]);
+    
+end
+
+% Create the file to convert yml results to mat results:
+convertResults(handles, cluster_opts, GUI_STATUS);
+
+% Create the auxiliary files:
+[video_file, background_file, side_file] = filesForOpenLavaJob(cluster_opts, GUI_STATUS);
+
+% Create the job file:
+job_file = openLavaJobArray(cluster_opts, GUI_STATUS, video_file, background_file, side_file);
+
+
+% ------ Converts the ylm c++ results into matfiles after each job 
+function convertResults(handles, cluster_opts, GUI_STATUS)
+
+C = load(GUI_STATUS.calibration_file.mat);
+M = load(GUI_STATUS.model_file.mat);
+
+data.split_line = C.split_line;
+data.mirror_line = data.split_line;
+
+if isfield(C,'scale')
+    data.scale = C.scale;
+else
+    data.scale = 1;
+end
+
+data.model = M;
+data.IDX = C.ind_warp_mapping;
+data.ind_warp_mapping = C.ind_warp_mapping;
+data.inv_ind_warp_mapping = C.inv_ind_warp_mapping;
+data.flip = GUI_STATUS.flip_char == 'L';
+data.vid = [];
+data.bkg = [];
+
+% Saving temporary mat file to load when post-processing the tracking
+% results:
+save(fullfile(cluster_opts.job_path,sprintf('%s.mat',cluster_opts.job_name)),'-struct','data');
+
+% Copying the the track conversions to a folder all nodes can access:
+
+track_conversion_files = {'convertTracksToUnconstrainedView.m','cppToMATLABTracks.m','tempclusterjob.m'};
+
+N_files = length(track_conversion_files);
+
+success = zeros(1,N_files);
+
+for i_files = 1:N_files
+    success(i_files) = copyfile(fullfile(handles.cpp_root_path,track_conversion_files{i_files}),cluster_opts.job_path);
+end
+
+% Deleting auxiliary files if something goes wrong:
+if any(success == 0)
+    for i_files = 1:N_files
+        if success(i_files)
+        delete(fullfile(cluster_opts.job_path,track_conversion_files{i_files}));
+        end
+    end
+    
+    error('Could not copy the .m files to convert yml results to mat! Expected files under %s are %s, %s, %s.',handles.cpp_root_path,track_conversion_files{:});
+    
+end
+
+function job_file = openLavaJobArray(cluster_opts, GUI_STATUS, video_file, background_file, side_file)
+
+job_name_stem = fullfile(cluster_opts.job_path,cluster_opts.job_name);
+
+% If .err and .out files exist, delete them:
+if exist(sprintf('%s.out',job_name_stem),'file');
+    delete(sprintf('%s.out',job_name_stem));
+end
+
+if exist(sprintf('%s.err',job_name_stem),'file');
+    delete(sprintf('%s.err',job_name_stem));
+end
+
+job_file = sprintf('%s.job',job_name_stem);
+
+job_fid = fopen(job_file,'w');
+
+if job_fid < 0
+    error('Could not create .job file. Check writing permissions!');
+end
+
+safefid = onCleanup(@()(fclose(job_fid)));
+
+fprintf(job_fid,'#BSUB -o %s.out\n',job_name_stem);
+fprintf(job_fid,'#BSUB -e %s.err\n',job_name_stem);
+fprintf(job_fid,'#!/bin/bash\n');
+fprintf(job_fid,'#echo $LSB_JOBINDEX\n');
+fprintf(job_fid,'file_name=$(sed "${LSB_JOBINDEX}q;d" %s)\n',video_file);
+fprintf(job_fid,'bkg_name=$(sed "${LSB_JOBINDEX}q;d" %s)\n', background_file);
+fprintf(job_fid,'side_char=$(sed "${LSB_JOBINDEX}q;d" %s)\n',side_file);
+fprintf(job_fid,'echo "$file_name"\n');
+fprintf(job_fid,'"%s" "%s" "${file_name}" "${bkg_name}" "%s" "%s" "${side_char}" "%s";\n',fullfile(cluster_opts.root,'LocoMouse'), cluster_opts.config_cluster_file_path, cluster_opts.models_cluster_file_path,cluster_opts.calibration_cluster_file_path, GUI_STATUS.output_path);
+
+% Calling a MATLAB script to convert yml results to mat.
+fprintf(job_fid,'matlab -nodesktop -nodisplay -r "cd ''%s''; tempclusterjob(''%s'',''$file_name'',''$bkg_name'',''$side_char'',''%s'');quit;"',...
+    cluster_opts.job_path ,...
+    GUI_STATUS.output_path,...
+    fullfile(cluster_opts.job_path, sprintf('%s.mat',cluster_opts.job_name)));
+
+
+function [video_file, background_file, side_file] = filesForOpenLavaJob(cluster_opts, GUI_STATUS)
+
+% Printing video files:
+video_file = fullfile(cluster_opts.job_path, sprintf('%s_video_list.txt',cluster_opts.job_name));
+printFileList(video_file, GUI_STATUS.video_list,[]);
+
+% Printing Background files:
+background_file = fullfile(cluster_opts.job_path, sprintf('%s_background_list.txt',cluster_opts.job_name));
+printFileList(background_file, GUI_STATUS.video_list, GUI_STATUS.background_function);
+
+% Printing side files:
+side_file = fullfile(cluster_opts.job_path, sprintf('%s_side_list.txt',cluster_opts.job_name));
+
+if isempty(GUI_STATUS.flip_function)
+    
+    side_char_list = repmat(GUI_STATUS.flip_char,size(GUI_STATUS.video_list,1),1);
+    if isunix
+        side_char_list = mat2cell(side_char_list,ones(size(side_char_list,1),1),1);
+    elseif ismac 
+        error('MAC is not supported. See here how MAC behaves!');
+    end
+        
+    printFileList(side_file, repmat(GUI_STATUS.flip_char,size(GUI_STATUS.video_list,1),1), []);
+else
+    
+    printFileList(side_file, GUI_STATUS.video_list, GUI_STATUS.flip_function);
+end
+
+
+%%% Printing files necessary for cluster job
+function [] = printFileList(txt_file_path, file_list,pre_processing_fun)
+
+fid = fopen(txt_file_path,'w');
+
+if fid < 0
+    error('Could not create text file %s', txt_file_path);
+end
+
+cleanfid = onCleanup(@()(fclose(fid)));
+
+N_files = size(file_list,1);
+
+for i_files = 1:N_files
+    
+    if ischar(file_list)
+        file_name = strtrim(file_list(i_files,:));
+    elseif iscell(file_list)
+        file_name = strtrim(file_list{i_files});
+    end
+    
+    if ~isempty(pre_processing_fun)
+        file_name = feval(pre_processing_fun,file_name);
+    end
+    
+    fprintf(fid,[file_name '\n']);
+end
+
+
+% >>>>>>> upstream/master
 

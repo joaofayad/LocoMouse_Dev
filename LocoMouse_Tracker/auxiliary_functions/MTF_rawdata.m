@@ -32,7 +32,7 @@ function [final_tracks,tracks_tail,data,debug] = MTF_rawdata(data, model,bb_choi
 % Code for that tracker is available here:
 % http://www.eecs.qmul.ac.uk/~chrisr/tracking.tar.gz.
 %
-% Area features are not tracked over time. the highest scoring area from
+% Area features are not tracked over time. Yhe highest scoring area from
 % each image is kept.
 %
 % Author: Joao Fayad (joao.fayad@neuro.fchampalimaud.org)
@@ -68,20 +68,8 @@ else
 end
 
 N_frames = floor(vid.Duration * vid.FrameRate);
-% N_frames = 500;
-% warning('frame number was set to 10 for debugging reasons! - DE')
 
 N_views = 2; % FIXME: Should come from the code...
-
-% % [GF]
-% % check if mouse comes from L or R based file name
-% % do not use checkmouseside function
-% if strcmp(data.bkg(end-4),'L')
-%     flip = 1;
-% else
-%     flip = 0;
-% end
-% %
 
 if ~isfield(data,'flip')
     data.flip = checkMouseSide(vid,Bkg); % Check if video is reversed.
@@ -154,15 +142,18 @@ expected_im_size = size(inv_ind_warp_mapping);
 bounding_box = NaN(2,3,N_frames);
 bdymasscenter = nan(N_frames,2); % [GF]
 
+%%% FIXME: No need to do this for every file. Better to pass the options as
+%%% an input argument [joaofayad]
 [p_boundingBoxFunctions, ~, ~]=fileparts(which('computeMouseBox')); % find the folder containing BoundingBoxOptions.mat
 load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'ComputeMouseBox_cmd_string','ComputeMouseBox_option'); % load bounding box option information
 disp(['Using bounding box option "',char(ComputeMouseBox_option(bb_choice)),'"']); 
 tcmd_string = strtrim(char(ComputeMouseBox_cmd_string(bb_choice)));
 disp(['(',tcmd_string,')']);
 flip = data.flip;
+
 parfor i_images = 1:N_frames
     % CODE TESTING [DE]
-    contrast_template = 'C:\Users\Dennis\Documents\DATA_DarkvsLight_Overground\Contrast_Template.mat';
+    contrast_template = []; % Development code should not be on master [joaofayad]
     [I,Iaux] = readMouseImage( ...
         vid,...
         i_images,...
@@ -198,11 +189,12 @@ bounding_box_dim = round(nanmin(nanmean(bounding_box(2,:,:),3) + 3 * nanstd(boun
 Nsamples = 5; 
 coeff = ones(1, Nsamples)/Nsamples;
 bounding_box = round(squeeze(bounding_box(1,:,:)));
-% debug.bounding_box = bounding_box;
-% debug.bounding_box_dim = bounding_box_dim;
+
 temp = bounding_box;
 temp = filter(coeff, 1,temp' ,[],1)';
-bounding_box(:,:,Nsamples+1:end-Nsamples) = round(temp(:,:,Nsamples+1:end-Nsamples));clear temp N_samples coeff
+bounding_box(:,:,Nsamples+1:end-Nsamples) = round(temp(:,:,Nsamples+1:end-Nsamples));
+clear temp N_samples coeff;
+
 xvel = diff(squeeze(bounding_box(1,:,:)),1,2);
 
 % Parameters for the tracker:
@@ -231,20 +223,21 @@ else
     I_hist_origin = [];
 end
 
+
+%%% FIXME: This should not be loaded at every call as it is the same
+%%% setting for all the videos. Make it an input argument.
 % loading weight settings [DE]
 WS=load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'WeightSettings');
 tweight =  WS.WeightSettings{bb_choice};
+
 % Looping over all the images
 % warning('for changed to FOR for debugging reasons. [DE]')
 parfor i_images = 1:N_frames
-%     warning('function breaking debugging edit. [DE]')
-%     i_images=ceil(N_frames/2);
-   %% Reading images from video and preprocessing data:
-   % disp(['frame: ',num2str(i_images)]);
+%% Reading images from video and preprocessing data:
     bounding_box_i = bounding_box(:,i_images);
     
     % CODE TESTING [DE]
-    contrast_template = 'C:\Users\Dennis\Documents\DATA_DarkvsLight_Overground\Contrast_Template.mat';
+    contrast_template = []; % Development code should not be on master [joaofayad]
     [~,Iaux] = readMouseImage( ...
         vid,...
         i_images,...
@@ -301,8 +294,13 @@ parfor i_images = 1:N_frames
             x_tail_cut = 1:l_x_cut-round(0.8*tail_x_threshold);
             
             % Croping the mouse:
-            [tracks_tail(:,:,i_images),tm] = tailDetectionFilter3(cellfun(@(x)(x(:,x_tail_cut)),I_cell,'un',0),Tmask, split_line,w_line,rho_line,N_tail_points);
+            if bb_choice == 10
+                 [tracks_tail(:,:,i_images),tm] = tailDetection_BasedOnSide(cellfun(@(x)(x(:,x_tail_cut)),I_cell,'un',0),Tmask, split_line,w_line,rho_line,N_tail_points);
+            else
+                [tracks_tail(:,:,i_images),tm] = tailDetectionFilter3(cellfun(@(x)(x(:,x_tail_cut)),I_cell,'un',0),Tmask, split_line,w_line,rho_line,N_tail_points);
+            end
             mask_i = cellfun(@(x,y)([x true(size(x,1),size(y,2)-size(x,2))]),tm,I_cell,'un',0);
+            
             tracks_tail(:,:,i_images) = bsxfun(@plus,tracks_tail(:,:,i_images),bsxfun(@max,OFFSET,zeros(3,1)));
         else
             mask_i{1} = true(size(I_cell{1}));
@@ -349,16 +347,12 @@ parfor i_images = 1:N_frames
                 [i{i_views}, j{i_views}] = ind2sub(size(I_cell{i_views}),ind_temp(detections)');
                 if i_views  == 1
                     % Apply non-maxima suppresion to detected areas:
-%                     [D2{i_views}, scores{i_views}] = nmsMax_mexed([i{i_views} j{i_views}],box_size_point{i_views}, scores{i_views}','center'); % use pre-compiled version
+                    
+                    %%% FIXME: Add faster nmsMax algorithm based on a mask.
                     [D2{i_views}, scores{i_views}] = nmsMax([i{i_views} j{i_views}],box_size_point{i_views}, scores{i_views}','center',0.5,true);
-                    % Refine locations taking the weighted mean of detections scores arond the maxima found:
-%                     D2{i_views} = weightedMean(D2{i_views}, Cmat, box_size_point{i_views});
-%                     [D2{i_views}, scores{i_views}] = nmsMax_mexed(D2{i_views},box_size_point{i_views}, scores{i_views},'center'); % use pre-compiled version
-                    %[D2{i_views}, scores{i_views}] = nmsMax(D2{i_views},box_size_point{i_views}, scores{i_views},'center');
                     D2{1}(:,2) = D2{1}(:,2) + max(OFFSET(1),0);
                     D2{1}(:,1) = D2{1}(:,1) + split_line + max(OFFSET(2),0);
                     tracks_bottom{i_point,i_images} = [D2{1}(:,[2 1])';scores{i_views}];
-                    
                     
                 else
                     % Applying a more conservative non-maxima suppression
@@ -407,7 +401,7 @@ parfor i_images = 1:N_frames
                 
                 % CODE TESTING [DE]
                 %[~,Iaux2] = readMouseImage(vid,i_images-1,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
-                contrast_template = 'C:\Users\Dennis\Documents\DATA_DarkvsLight_Overground\Contrast_Template.mat';
+                contrast_template = []; % No experimental code on master [joaofayad]
                 [~,Iaux2] = readMouseImage( ...
                     vid,...
                     i_images-1,...
@@ -419,8 +413,6 @@ parfor i_images = 1:N_frames
                     'contrast_template',...
                     contrast_template);
                 % -----------------------------------------------------------------------------------------------
-
-                
                 
                 I_vel = double(Iaux) - double(Iaux2);
                 moving = I_vel > 25; %%% FIXME: This clearly depends on image size. Must be normalized in some way.
@@ -633,13 +625,8 @@ for i_tracks = 1:N_pointlike_tracks
     M_top(i_tracks,:) = Mpf_top;
 end
 
-% The output of this tracker should either be the "internal" tracks of the
-% algorithm i.e. always from left to right, or the fully corrected tracks
-% i.e. that match the input video. Vertically flipped internal tracks are
-% not a meaningful representation. 
-%
-% Code that flipped the tracks moved to the
-% convertTracksToUnconstrainedView function. [joaofayad]
+% The output of this tracker is always assuming the mice walk from left to
+% right. Post-processing for other cases is done outside of this function.
 
 % Debug data:
 debug.bounding_box = bounding_box;

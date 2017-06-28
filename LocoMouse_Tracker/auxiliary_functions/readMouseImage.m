@@ -91,6 +91,11 @@ for tSV = 1:size(setVars,2)
             end
             
         case 'contrast_template'
+            % [joaofayad]
+            if isempty(contrast_template)
+                continue;
+            end
+            
             if ischar(contrast_template)
                 if ~isempty(fileparts(contrast_template))
                     [~,~,tcte] = fileparts(contrast_template);
@@ -229,7 +234,8 @@ else
             error('Image is larger than expected!');
         end
         
-        ImgAux = gpuArray(uint8(zeros(size(ind_warp_mapping))));ImgAux(:) = Img(ind_warp_mapping(:));
+        ImgAux = uint8(zeros(size(ind_warp_mapping)));
+        ImgAux(:) = Img(ind_warp_mapping(:));
     else
         ImgAux = [];
     end

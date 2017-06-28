@@ -71,7 +71,7 @@ for i_fields = 1:length(field_list)
     if isfield(D,field_name)
         handles.(field_name) = D.(field_name);
     else
-        error('Input structure does not contain necessary field %s.',fieldn_name);
+        error('Input structure does not contain necessary field %s.',field_name);
     end
 end
 
@@ -135,7 +135,8 @@ handles.plot_handles_ong_vec(1,:) = line(ones(1,handles.N_ong_vec_tracks),handle
 % handles.color_choice_ong = get(handles.plot_handles_ong,'Color');
 
 % Candidates:
-handles.N_candidates = cellfun(@(x)(size(x,1)-handles.N_ong_tracks),handles.Unary);
+% handles.N_candidates = cellfun(@(x)(size(x,1)-handles.N_ong_tracks),handles.Unary);
+handles.N_candidates = cellfun(@(x)(size(x,2)),handles.tracks_bottom);
 handles.N_candidates_joint = cellfun(@(x)(size(x,2)),handles.tracks_top);
 handles.N_candidates_max = max([handles.N_candidates_joint(:);handles.N_candidates(:)]);
 
@@ -157,8 +158,19 @@ handles.plot_handles_bounding_box = zeros(1,4);
 for i_box = 1:4
     handles.plot_handles_bounding_box(i_box) = line(0,0,'Color','y','Marker','*');
 end
-% BR BL TR TL
-handles.bounding_box_corners = [1 1;-handles.bounding_box_dim(1) 1;1 -handles.bounding_box_dim(2);-handles.bounding_box_dim(1) -handles.bounding_box_dim(2)]-1;
+% % BR BL TR TL
+% handles.bounding_box_corners = [1 1;...
+%     -(handles.bounding_box_dim(1)-1) 1;...
+%     1 -(handles.bounding_box_dim(2)-1);...
+%     -(handles.bounding_box_dim(1)-1) -(handles.bounding_box_dim(2)-1)]-1;
+
+% This should be so adding the BR coordinate over time puts the box in the
+% correct place.
+handles.bounding_box_corners = [handles.bounding_box_dim(1) handles.bounding_box_dim(2);...
+                                1 handles.bounding_box_dim(2);
+                                handles.bounding_box_dim(1) 1;
+                                1 1];
+handles.bounding_box_corners = bsxfun(@minus,handles.bounding_box_corners,handles.bounding_box_dim(1:2)');
 
 % Initializing the track list:
 set(handles.popupmenu_tracks,'String',char({'FR Paw';'HR Paw';'FL Paw';'HL Paw';'Snout'}));
@@ -514,6 +526,13 @@ if( get(handles.checkbox_bounding_box,'Value'))
      
     corners = bsxfun(@plus,handles.bounding_box_corners,handles.bounding_box(1:2,userdata.current_frame)');
     corners(:,2) = corners(:,2) + handles.data.split_line;
+    
+    % FIXME: Make sure c++ and matlab outputs the box position in absolute
+    % coordinates!
+    if any(corners(:,2) > size(handles.image.CData,1))
+        corners(:,2) = corners(:,2) - handles.data.split_line;
+    end
+    
     % Check for need to warp: Box is defined on the corrected image.
     if get(handles.uipanel_image_type,'SelectedObject') == handles.radiobutton_original_image
         corners(:,[2 1]) = warpPointCoordinates(corners(:,[2 1]), ...

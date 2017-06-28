@@ -1,4 +1,4 @@
-LocoMouse Tracker v2.0 Development Version
+# LocoMouse Tracker v2.0 Development Version
 
 This is a development version meant for members of the Carey lab 
 (Champalimaud Foundation, Lisbon, Portugal) to be tweaked and expanded 
@@ -19,7 +19,7 @@ or the original author Joao Fayad (joaofayad@gmail.com).
 If you find this code useful, please reference it together with the LocoMouse
 system paper.
 
---|Intro|--
+## Intro
 LocoMouse_Tracker was developed in MATLAB R2013 for tracking mouse features of 
 locomoting mice when observing them from the side and bottom view simultaneously. 
 Since then it is being updated for use in later Matlab versions when necessary for 
@@ -37,7 +37,7 @@ Please read the following files before using this code:
 folder.
 
 
---|Requirements|--
+## Requirements
 Matlab toolboxes:
 - Image processing toolbox
 - Parallel toolbox (not strictly required, but very slow otherwise).
@@ -64,7 +64,7 @@ These packages are already included in this release. Please read the respective
 copyright and license files before using this software.
 
 
---|Content|--
+## Content
 This section briefly describes the different modules and how to use them. For a
 more detailed description please refer to the paper and the help
 sections/comments on the code. A short tutorial with the sequence of steps from
@@ -100,14 +100,13 @@ This GUI is useful for examining the behaviour of the SVM detectors and the
 multibody tracking algorithm to understand the tracking results. Useful to
 identify possible causes of bad tracks when they happen. 
 
---|Practical Use and Limitations|-- 
+## Practical Use and Limitations 
 The SVM models are dependent on the image conditions used to train them. To
 use the provided SVM models, please make sure the following conditions apply:
 
 * Images must be grayscale.
 
-* Images must be resized such that features have the expected size in pixels as
-no multiresolution analysis is performed (for reference, the size of the bottom
+* Images must be resized such that features have the expected size in pixels. No multiresolution analysis is performed (for reference, the size of the bottom
 view detector for the paw is 30x30 pixels). The system is cabable of rescaling,
 but needs user input on the scaling factor.
 
@@ -117,7 +116,7 @@ but needs user input on the scaling factor.
 However, for mice that look white on the image it might not be possible to
 distinguish paws from body on the bottom view, which would break the system.
 
---|Questions we were asked|--
+## Questions we were asked
 * What objective did you use and how far from the corridor is it?
 In the first publication using LocoMouse:
 objective: format is 4/3 inch, focal length 12 mm, iris range F2.0-22
@@ -130,7 +129,7 @@ assign identity to the potential paws when the paws move too far between
 frames. One can change the algorithm to allow larger distances, but then you
 run into the problem that more than one paw is located within the search region. In any case, if you reduce the frame rate, you need to make sure the exposure time does not increase. Longer exposure times lead to motion blurr.
 
---|Acknowledgements|-- 
+## Acknowledgements
 This software was develop by Joao Fayad at the Neural Circuits and Behavior Lab
 from the Champalimaud Neuroscience Programme. It is inspired by previously
 existing tracking code (unreleased) developed by Ana S. Machado, Dana Darmohray
