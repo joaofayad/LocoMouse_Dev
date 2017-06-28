@@ -54,15 +54,33 @@ N = 15;
 
 st = find(has_point,1,'first');
 en = find(has_point,1,'last');
-
-tail_length = en - st + 1;
 i_views = 2;
+tail_side = NaN(i_views,N);
 
-steps = en - (0:N).*round((tail_length)/N);
-steps = steps(steps>0);
-steps = steps(end:-1:1);
-Ntail = length(steps)-1;
-tail_side = NaN(2,N);
+fixed_length_segments = true;
+tail_length = en - st + 1;
+
+if fixed_length_segments
+    fixed_length = 15;
+    Nfixed = round(tail_length/fixed_length);
+    
+    if Nfixed < 1
+        Ntail = 0;
+    else
+        
+        steps = en - ((0:Nfixed) * fixed_length);
+        %(0:.*round((tail_length)/Nfixed);
+        steps = steps(steps>0);
+        steps = steps(end:-1:1);
+        Ntail = min(length(steps)-1,N);
+    end
+else
+    
+    steps = en - (0:N).*round((tail_length)/N);
+    steps = steps(steps>0);
+    steps = steps(end:-1:1);
+    Ntail = length(steps)-1;
+end
 
 for i_tail = 1:Ntail
     x = sum(Tail_Mask{i_views}(:,steps(i_tail):steps(i_tail+1)),1);
@@ -71,8 +89,13 @@ for i_tail = 1:Ntail
     tail_side(:,i_tail) = [steps(i_tail);0] + round(c);
 end
 
-tail_side(1,:) = min(max(1,tail_side(1,:)),size(IT,2));
-tail_side(2,:) = min(max(1,tail_side(2,:)),size(IT,1));
+tail_side(1,~isnan(tail_side(1,:))) = ...
+    min(max(1,tail_side(1,~isnan(tail_side(1,:)))),...
+    size(IT,2));
+
+tail_side(2,~isnan(tail_side(2,:))) = ...
+    min(max(1,tail_side(2,~isnan(tail_side(2,:)))),...
+    size(IT,1));
 
 % Bottom view:
 Tail = NaN(3,N);
@@ -86,7 +109,6 @@ Tail_Mask{1}(CC.PixelIdxList{idx}) = true;
 has_point_bottom_view = any(Tail_Mask{1},1);
 for i_points = 1:size(tail_side,2)
    
-    try
     if ~isnan(tail_side(1,i_points)) && has_point_bottom_view(tail_side(1,i_points)) 
                 
         y_bottom_s = find(IB(:,tail_side(1,i_points)),1,'first');
@@ -99,11 +121,7 @@ for i_points = 1:size(tail_side,2)
         
         Tail(2,i_points) = (y_bottom_s + y_bottom_e)/2;
         
-    end
-    catch
-        'wtf'
-    end
-    
+    end   
 end
 
 Tail(2,~isnan(Tail(2,:))) = min(max(1,Tail(2,~isnan(Tail(2,:)))),size(IB,1)) + mirror_line;
@@ -111,6 +129,4 @@ Tail(2,~isnan(Tail(2,:))) = min(max(1,Tail(2,~isnan(Tail(2,:)))),size(IB,1)) + m
 Tail_Mask{1} = false(size(I_cell{1}));
 
 Tail_Mask{2} = ~Tail_Mask{2};
-
 Tail([1 3],:) = tail_side;
-
