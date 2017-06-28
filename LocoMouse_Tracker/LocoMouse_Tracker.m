@@ -472,7 +472,8 @@ total_time = tic;
 bb_choice = get(handles.BoundingBox_choice,'Value');
 [p_boundingBoxFunctions, ~, ~] = fileparts(which('computeMouseBox')); % find the folder containing BoundingBoxOptions.mat
 load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'ComputeMouseBox_cmd_string','ComputeMouseBox_option'); % load bounding box option information
-if iscell(ComputeMouseBox_cmd_string{bb_choice})
+
+if iscell(ComputeMouseBox_cmd_string{bb_choice}) % Potentially problematic determinater choice
     cpp = true;
     cpp_config_file = fullfile(handles.cpp_root_path,ComputeMouseBox_cmd_string{bb_choice}{2});
 else
@@ -545,9 +546,13 @@ try
     
     if get(checkbox_overwrite_results,'Value') || ...
             (~exist(data_file_name,'file') && ~exist(image_file_name,'file'))
+        
         % If not overwriting results, checking if files exist.
         bkg_file = feval(bkg_fun,file_name);
-        if isempty(bkg_file)
+        if ~exist(bkg_file,'file')
+            disp('WARNING: Background file not found. Background image will be computed from video.')
+            bkg_file = 'compute';
+        elseif isempty(bkg_file)
             bkg_file = 'compute';
         end
         

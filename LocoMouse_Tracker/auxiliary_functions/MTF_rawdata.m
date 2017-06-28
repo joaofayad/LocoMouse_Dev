@@ -54,11 +54,51 @@ end
 % Checking if need to precompute background:
 if ischar(data.bkg)
     if strcmpi(data.bkg,'compute')
-        Bkg = read(vid,[1 Inf]);
+        % [DE playing with different automatic background settings...]
+        
+        % Using frames spread out across the movie doesn't increase quality
+        % but takes longer:
+        
+        % tic
+        %         if vid.Duration*vid.FrameRate > 1000
+        %             FramesToUse = floor([2 : (vid.Duration*vid.FrameRate) / 1000  : (vid.Duration*vid.FrameRate)-1]);
+        %         else
+        %             FramesToUse = [2:vid.Duration*vid.FrameRate];
+        %         end     
+        %         Bkg = uint8(zeros(length(FramesToUse),vid.Height,vid.Width));
+        %         for tf = 1:length(FramesToUse)
+        %             t_frame = FramesToUse(tf);
+        %             cBkg = read(vid,FramesToUse(tf));
+        %             if length(size(Bkg)) > 3
+        %                 cBkg = squeeze(Bkg(:,:,1,:));
+        %             end 
+        %             Bkg(tf,:,:) = cBkg;
+        %         end
+        % toc
+            
+
+        % using the last 1000 frames is faster and has the same quality:
+        
+        if vid.Duration*vid.FrameRate > 1000
+            FramesToUse = [(vid.Duration*vid.FrameRate)-1000 Inf];
+        else
+            FramesToUse = [2 Inf];
+        end     
+
+        Bkg = read(vid,FramesToUse);
         if length(size(Bkg)) > 3
             Bkg = squeeze(Bkg(:,:,1,:));
-        end
-        Bkg = median(Bkg,3);
+        end     
+        
+%         Bkg = median(Bkg,3);
+%         Bkg = min(Bkg,[],3);
+
+        % this appears to have the least mouse in it:
+        Bkg = prctile(Bkg,15,3);
+        
+        disp(['writing generated background file (15th percentile) ' vid.Name(1:end-3) 'png'])
+        imwrite(Bkg,[vid.Path filesep vid.Name(1:end-3) 'png'])
+        
     else
         % Attempt to read the backgrond as an image:
         Bkg = imread(data.bkg);
@@ -167,8 +207,6 @@ parfor i_images = 1:N_frames
 %     % -----------------------------------------------------------------------------------------------
 %     
 %      [I,Iaux] = readMouseImage(vid,i_images,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
-    
-    
     
     % To change bounding box computation, see READ_BEFORE_CHANGING_ANYTHING.m 
     % in ... \LocoMouse_Dev\LocoMouse_Tracker\boundingBoxFunctions  [DE]
