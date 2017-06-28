@@ -53,56 +53,8 @@ elseif isobject(data.vid)
 end
 % Checking if need to precompute background:
 if ischar(data.bkg)
-    if strcmpi(data.bkg,'compute')
-        % [DE playing with different automatic background settings...]
-        
-        % Using frames spread out across the movie doesn't increase quality
-        % but takes longer:
-        
-        % tic
-        %         if vid.Duration*vid.FrameRate > 1000
-        %             FramesToUse = floor([2 : (vid.Duration*vid.FrameRate) / 1000  : (vid.Duration*vid.FrameRate)-1]);
-        %         else
-        %             FramesToUse = [2:vid.Duration*vid.FrameRate];
-        %         end     
-        %         Bkg = uint8(zeros(length(FramesToUse),vid.Height,vid.Width));
-        %         for tf = 1:length(FramesToUse)
-        %             t_frame = FramesToUse(tf);
-        %             cBkg = read(vid,FramesToUse(tf));
-        %             if length(size(Bkg)) > 3
-        %                 cBkg = squeeze(Bkg(:,:,1,:));
-        %             end 
-        %             Bkg(tf,:,:) = cBkg;
-        %         end
-        % toc
-            
-
-        % using the last 1000 frames is faster and has the same quality:
-        
-        if vid.Duration*vid.FrameRate > 1000
-            FramesToUse = [(vid.Duration*vid.FrameRate)-1000 Inf];
-        else
-            FramesToUse = [2 Inf];
-        end     
-
-        Bkg = read(vid,FramesToUse);
-        if length(size(Bkg)) > 3
-            Bkg = squeeze(Bkg(:,:,1,:));
-        end     
-        
-%         Bkg = median(Bkg,3);
-%         Bkg = min(Bkg,[],3);
-
-        % this appears to have the least mouse in it:
-        Bkg = prctile(Bkg,15,3);
-        
-        disp(['writing generated background file (15th percentile) ' vid.Name(1:end-3) 'png'])
-        imwrite(Bkg,[vid.Path filesep vid.Name(1:end-3) 'png'])
-        
-    else
         % Attempt to read the backgrond as an image:
-        Bkg = imread(data.bkg);
-    end
+	Bkg = imread(data.bkg);
 else
     Bkg = data.bkg;
 end
