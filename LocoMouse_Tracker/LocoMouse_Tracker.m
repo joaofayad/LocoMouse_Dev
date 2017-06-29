@@ -7,7 +7,7 @@ function varargout = LocoMouse_Tracker(varargin)
 % Author: Joao Fayad (joao.fayad@neuro.fchampalimaud.org)
 % Last Modified: 17/11/2014
 
-% Last Modified by GUIDE v2.5 17-Nov-2016 13:29:56
+% Last Modified by GUIDE v2.5 28-Jun-2017 19:34:27
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -512,7 +512,21 @@ else
     % MATLAB code:
     for i_files = 1:Nfiles
         file_name = char(strtrim(file_list{i_files}));
-        successful_tracking(i_files) = track_MATLB_CPP(handles.data,handles.model,model_file,calibration_file, handles.root_path,file_name, output_fun, output_path, bkg_fun, handles.checkbox_overwrite_results,  handles.checkbox_ExpFigures.Value, handles.BoundingBox_choice.Value, cpp, '');
+        successful_tracking(i_files) = track_MATLB_CPP(handles.data,...
+                                                       handles.model,...
+                                                       model_file, ...
+                                                       calibration_file,...
+                                                       handles.root_path,...
+                                                       file_name,...
+                                                       output_fun,...
+                                                       output_path,...
+                                                       bkg_fun,...
+                                                       handles.CreateBackgroundImage.Value,...
+                                                       handles.checkbox_overwrite_results,...
+                                                       handles.checkbox_ExpFigures.Value,...
+                                                       handles.BoundingBox_choice.Value,...
+                                                       cpp,...
+                                                       '');
     end
 end
 
@@ -523,7 +537,7 @@ disp('------------------[Tracking END]----');
 set(handles.disable_with_start,'Enable','on');
 set(handles.enable_with_start,'Enable','off');
 
-function successful_tracking = track_MATLB_CPP(data, model,model_file, calibration_file, root_path, file_name,output_fun, output_path, bkg_fun, checkbox_overwrite_results,export_figures,bounding_box_choice,cpp,cpp_config_file)
+function successful_tracking = track_MATLB_CPP(data, model,model_file, calibration_file, root_path, file_name,output_fun, output_path, bkg_fun, make_bkg, checkbox_overwrite_results,export_figures,bounding_box_choice,cpp,cpp_config_file)
 try
     successful_tracking = true;
     % Going over the file list:
@@ -547,16 +561,53 @@ try
     if get(checkbox_overwrite_results,'Value') || ...
             (~exist(data_file_name,'file') && ~exist(image_file_name,'file'))
         
-        % If not overwriting results, checking if files exist.
+        % CHECK FOR BACKGROUND IMAGE AND CREATE ONE IF NECESSARY
+        % Checks if indicated file exists, then checks if sameName file
+        % exists. If both are negative, it creates a background image with
+        % the sameName convention.
+        
         bkg_file = feval(bkg_fun,file_name);
+        sameName_file = feval('sameName',file_name);
+        
         if ~exist(bkg_file,'file')
-            disp('WARNING: Background file not found. Background image will be computed from video.')
-            bkg_file = 'compute';
-        elseif isempty(bkg_file)
-            bkg_file = 'compute';
+            disp(['Did not find a background image using the ''',bkg_fun,''' convention.'])
+
+            if exist(sameName_file,'file')
+                disp(['Found a background image using the ''sameName'' convention and using that!'])
+                bkg_fun = 'sameName';
+                bkg_file = feval(bkg_fun,file_name);
+
+            elseif make_bkg
+                disp('Creating Background image from video.')
+                % [DE playing with different automatic background settings...]
+                
+                vid = VideoReader(file_name);
+                if vid.Duration*vid.FrameRate > 1000
+                    FramesToUse = [(vid.Duration*vid.FrameRate)-1000 Inf]; % using the last 1000 frames
+                else
+                    FramesToUse = [2 Inf]; % or all of them
+                end     
+
+                Bkg = read(vid,FramesToUse);
+                if length(size(Bkg)) > 3
+                    Bkg = squeeze(Bkg(:,:,1,:));
+                end     
+
+            % this appears to have the least mouse in it:
+                Bkg = prctile(Bkg,15,3);
+
+                disp(['writing generated background file (15th percentile) ' vid.Name(1:end-3) 'png'])
+                imwrite(Bkg,[vid.Path filesep vid.Name(1:end-3) 'png'])
+
+                bkg_fun = 'sameName';
+                bkg_file = feval(bkg_fun,file_name);
+                clear vid FramesToUse
+            else
+                error('No background image provided.')
+            end
         end
         
-        % Attempting to track:
+        % ATTEMPTING TO TRACK:
         current_file_time = tic;
         fprintf('Tracking %s ...\n',file_name)
         data.bkg = bkg_file;
@@ -1384,3 +1435,12 @@ end
 
 % >>>>>>> upstream/master
 
+
+
+% --- Executes on button press in CreateBackgroundImage.
+function CreateBackgroundImage_Callback(hObject, eventdata, handles)
+% hObject    handle to CreateBackgroundImage (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of CreateBackgroundImage
