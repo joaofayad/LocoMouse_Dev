@@ -151,7 +151,7 @@ if ~isempty(varargin)
     handles = resetTimer(handles);
     
     % Initialising the occlusion grid display:
-    if length(varargin{1}) > 3
+    if length(varargin{1}) > 3 && handles.N_ong_tracks ~= 0
         handles.ong_tracks = varargin{1}{4}{1};
         handles.bounding_box = varargin{1}{4}{2};
         handles.N_ong_tracks = size(handles.ong_tracks,2);
@@ -631,9 +631,14 @@ function menu_load_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 %---- Updating the tracks
-function handles = loadTracks(handles, final_tracks, tracks_tail, debug)
+function handles = loadTracks(handles, final_tracks, tracks_tail, debug_info)
 % Checking the number of frames: Should be the number of frames of the
 % video except when the tracks have less data.
+
+if ~exist('debug_info','var')
+    debug_info = [];
+end
+
 handles.point_tracks = final_tracks;
 handles.N_frames = min(handles.vid.NumberOfFrames,size(handles.point_tracks,3));
 
@@ -656,10 +661,10 @@ else
 end
 
 %Initialising the occlusion grid display:
-if ~isempty(debug)
-    handles.ong_tracks = debug.Occlusion_Grid_Bottom;
-    handles.bounding_box = debug.bounding_box;
-    handles.N_ong_tracks = size(debug.Occlusion_Grid_Bottom,2);
+if ~isempty(debug_info)
+    handles.ong_tracks = debug_info.Occlusion_Grid_Bottom;
+    handles.bounding_box = debug_info.bounding_box;
+    handles.N_ong_tracks = size(debug_info.Occlusion_Grid_Bottom,2);
     handles.plot_handles_ong = line(ones(2,handles.N_ong_tracks),ones(2,handles.N_ong_tracks),'Marker','+','Color','w','MarkerFaceColor','m','LineStyle','none','Visible','off');
     handles.color_choice_ong = get(handles.plot_handles_ong,'Color');
     set(handles.checkbox_occlusion,'Enable','on');
@@ -782,7 +787,7 @@ D = load(fullfile(path_name,file_name));
 
 handles = loadVideo(handles,D.data.vid,D.data.flip);
 handles = loadBackground(handles,D.data.bkg);
-handles = loadTracks(handles,D.final_tracks,D.tracks_tail,D.debug);
+handles = loadTracks(handles,D.final_tracks,D.tracks_tail,D.debug_info);
 handles = resetTimer(handles);
 displayImage([],[],handles);
 
