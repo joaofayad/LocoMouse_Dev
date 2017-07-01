@@ -33,14 +33,6 @@ clear I
 IT = (conv2(double(I_cell{2}),w{2},'same')-rho{2}) > 0;
 IB = (conv2(double(I_cell{1}),w{1},'same')-rho{1}) > 0;
 
-% Default number of segments:
-N = 15;
-
-Tail = NaN(3,N);
-Tail_Mask = cell(1,2);
-Tail_Mask{1} = false(size(IB));
-Tail_Mask{2} = false(size(IT));
-
 % Treatig the side view as the dominant view
 IT = imdilate(IT,strel('square',5));
 
@@ -50,11 +42,6 @@ IT = imdilate(IT,strel('square',5));
 % bounding box
 
 CC = bwconncomp(IT);
-if isempty(CC.PixelIdxList)
-    % No side view, no tail.
-    return;
-end
-
 numPixels = cellfun(@numel,CC.PixelIdxList);
 [~,idx] = max(numPixels);
 
@@ -63,7 +50,7 @@ Tail_Mask{2}(CC.PixelIdxList{idx}) = true;
 
 % segment_length = 0.1 * size(I_cell{2},2);
 has_point = any(Tail_Mask{2},1);
-
+N = 15;
 
 st = find(has_point,1,'first');
 en = find(has_point,1,'last');
@@ -111,6 +98,8 @@ tail_side(2,~isnan(tail_side(2,:))) = ...
     size(IT,1));
 
 % Bottom view:
+Tail = NaN(3,N);
+
 CC = bwconncomp(IB);
 numPixels = cellfun(@numel,CC.PixelIdxList);
 [~,idx] = max(numPixels);
@@ -122,7 +111,7 @@ for i_points = 1:size(tail_side,2)
    
     if ~isnan(tail_side(1,i_points)) && has_point_bottom_view(tail_side(1,i_points)) 
                 
-        y_bottom_s = find(Tail_Mask{1}(:,tail_side(1,i_points)),1,'first');
+        y_bottom_s = find(IB(:,tail_side(1,i_points)),1,'first');
         
         if isempty(y_bottom_s)
             continue;

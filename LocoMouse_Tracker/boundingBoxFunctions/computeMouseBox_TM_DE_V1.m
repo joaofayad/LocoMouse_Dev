@@ -1,4 +1,4 @@
-function [box, cc, I_crop] = computeMouseBox_TM_DE_V1(I,split_line,threshold)
+function [box, CC, I_crop] = computeMouseBox_TM_DE_V1(I,split_line,threshold)
 
 % COMPUTEMOUSEBOX in its different version computes the bounding box around 
 % the mouse on a background subtracted image.

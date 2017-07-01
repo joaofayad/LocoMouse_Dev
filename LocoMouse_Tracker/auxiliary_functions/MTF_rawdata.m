@@ -1,4 +1,4 @@
-function [final_tracks,tracks_tail,data,debug] = MTF_rawdata(data, model,bb_choice, gui)
+function [final_tracks,tracks_tail,data,debug] = MTF_rawdata(data, model,bb_choice)
 % MTF   Tracks a set of predefined (mouse) features over a given video.
 %
 % INPUT:
@@ -53,16 +53,8 @@ elseif isobject(data.vid)
 end
 % Checking if need to precompute background:
 if ischar(data.bkg)
-    if strcmpi(data.bkg,'compute')
-        Bkg = read(vid,[1 Inf]);
-        if length(size(Bkg)) > 3
-            Bkg = squeeze(Bkg(:,:,1,:));
-        end
-        Bkg = median(Bkg,3);
-    else
         % Attempt to read the backgrond as an image:
-        Bkg = imread(data.bkg);
-    end
+	Bkg = imread(data.bkg);
 else
     Bkg = data.bkg;
 end
@@ -152,12 +144,6 @@ disp(['(',tcmd_string,')']);
 flip = data.flip;
 
 parfor i_images = 1:N_frames
-    % Allows the GUI to halt any computations
-%     if ~gui.Compute()
-%         error('Tracking was Stoped by the user!');
-%     end
-    
-    
     % CODE TESTING [DE]
     contrast_template = []; % Development code should not be on master [joaofayad]
     [I,Iaux] = readMouseImage( ...
@@ -173,8 +159,6 @@ parfor i_images = 1:N_frames
 %     % -----------------------------------------------------------------------------------------------
 %     
 %      [I,Iaux] = readMouseImage(vid,i_images,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
-    
-    
     
     % To change bounding box computation, see READ_BEFORE_CHANGING_ANYTHING.m 
     % in ... \LocoMouse_Dev\LocoMouse_Tracker\boundingBoxFunctions  [DE]
@@ -241,11 +225,6 @@ tweight =  WS.WeightSettings{bb_choice};
 parfor i_images = 1:N_frames
 %% Reading images from video and preprocessing data:
     bounding_box_i = bounding_box(:,i_images);
-   
-    % Allows the GUI to halt any computations
-%     if ~gui.Compute()
-%         error('Tracking was Stoped by the user!');
-%     end
     
     % CODE TESTING [DE]
     contrast_template = []; % Development code should not be on master [joaofayad]
