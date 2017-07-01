@@ -773,6 +773,10 @@ function menu_track_and_video_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 [file_name,path_name] = uigetfile({'*.mat','MAT-files (*.mat)'},'Choose a MAT-File from the LocoMouse_Tracker:',handles.latest_path,'MultiSelect','off');
 
+if ~ischar(file_name)
+    return
+end
+
 D = load(fullfile(path_name,file_name));
 
 handles = loadVideo(handles,D.data.vid,D.data.flip);
