@@ -24,13 +24,13 @@ function [Centroids,ind,cos_theta] = LocoMouse_CalibrationCorrespondences(vid,bk
 % Checking if we have the structure or the path:
 if ischar(vid)
     vid = VideoReader(vid);
-    
+   
 elseif verLessThan('matlab','8.5')
     if ~strcmpi(class(vid),'VideoReader')
         error('Input object must be of the VideoReader type.');
     end
 elseif isobject(vid)
-    if ~strcmpi(get(vid,'Type'),'VideoReader')
+    if ~strcmpi(class(vid),'VideoReader')
         error('Input object must be of the VideoReader type.')
     end
 else
@@ -67,11 +67,20 @@ end
 %% Processing the images and looking for the calibration object:
 N_frames = length(frame_vec);
 Centroids = NaN(2,2,N_frames);
+Itemp = read(vid,1);
+if length(size(Itemp)) == 3
+    rgb = true;
+else
+    rgb = false;
+end
 parfor i_images = 1:N_frames
 % Read the image, remove the background and threshold:
     i_frame = frame_vec(i_images);
-    I = im2bw(read(vid,i_frame)-bkg,t);
-    
+    I = read(vid,i_frame);
+    if (rgb)
+        I = I(:,:,1);
+    end
+    I = im2bw(I-bkg,t);
     % Split:
     I_cell = cell(2,1);
     [I_cell{[2 1]}] = splitImage(I,split_line);
