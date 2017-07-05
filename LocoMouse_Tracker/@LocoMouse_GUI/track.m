@@ -63,11 +63,11 @@ function [] = track(gui)
         end
         
         % CPP code:
-        data = handles.data;
-        root_path = handles.root_path;
-        overwrite_results = handles.checkbox_overwrite_results;
-        export_figures = handles.checkbox_ExpFigures.Value;
-        model = handles.model;
+        data = gui.data;
+        root_path = gui.root_path;
+        overwrite_results = gui.checkbox_overwrite;
+        export_figures = gui.checkbox_save_figures.Value;
+        model = gui.data.model;
         parfor i_files = 1:Nfiles
             file_name = char(strtrim(video_list{i_files}));
             successful_tracking(i_files) = track_MATLB_CPP(data, model,model_file, calibration_file, root_path, file_name, output_fun, output_path, bkg_fun, overwrite_results, export_figures,[], cpp, cpp_config_file);
@@ -143,7 +143,7 @@ function successful_tracking = track_MATLB_CPP(data, model,model_file, calibrati
                     error('Only windows is supported so far. Compile the C++ code in the current platform and insert the call here.');
                 end
             else
-                [final_tracks_c,tracks_tail_c,data,debug] = MTF_rawdata(data, model, bounding_box_choice, gui);
+                [final_tracks_c,tracks_tail_c,data,debug] = MTF_rawdata(data, model, bounding_box_choice);
             end
             
             [final_tracks,tracks_tail] = convertTracksToUnconstrainedView(final_tracks_c,tracks_tail_c,size(data.ind_warp_mapping),data.ind_warp_mapping,data.flip,data.scale);

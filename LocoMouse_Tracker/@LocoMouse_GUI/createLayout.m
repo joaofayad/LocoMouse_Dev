@@ -23,21 +23,46 @@ function [] = createLayout(gui)
     % Adjustig the widhts: As the layout is "manually" adjusted to
     % confortably contain all the strings, the added space needs to
     % propagate to the other containers.
-       
-    N_subcolumns = length(gui.layout.settings_grid.Widths);
     
-    default_first_column_width = gui.layout.settings.Position(3);
+    gui.populateOptions();
+    
+    if isunix
+        % To avoid clipping strings we must compute the correct width
+        % of the boxes
+        
+        max_widht_string = ...
+            max(cellfun(@(x)(length(x)),...
+            gui.popupmenu_calibration.String,...
+            'un',true));
+        
+        text_width = max_widht_string * ...
+            gui.popupmenu_calibration.FontSize;
+        
+        set(gui.layout.settings_grid,...
+            'Widths',[text_width 3*gui.default_height]);
+        
+        % By changing the width of this column, in order for the gui
+        % not to break we must increase the width of the whole window
+        % and move the second column accordingly.
+        
+        
+    else
+        % On windows (and maybe mac) this is standardized and works
+        % well.
+        % Defining column widths:
+        
+        set(gui.layout.settings_grid,...
+            'Widths',[8 3]*gui.default_height);
+    end
+    
+    N_subcolumns = length(gui.layout.settings_grid.Widths);
     
     adjusted_first_column_width = ...
         sum(gui.layout.settings_grid.Widths) + ...
         gui.layout.settings_grid.Spacing * (N_subcolumns-1) + ...
         gui.layout.settings.Padding*2;
-    
-    
-    
+        
     gui.layout.main.Widths = [adjusted_first_column_width -1];
-    
-    gui.layout
 
     % Create Window Menus:
     createMenus();
@@ -164,40 +189,36 @@ function [] = createLayout(gui)
         
         %%% FIXME: Not all uicontrols are initialized here. Find the best
         %%% location to initialize all this and resize as needed.
-        gui.populateOptions();
-        
-        if isunix
-            % To avoid clipping strings we must compute the correct width
-            % of the boxes
-                        
-            old_width = gui.layout.settings.Position(3);
-
-            max_widht_string = ...
-                max(cellfun(@(x)(length(x)),...
-                gui.popupmenu_calibration.String,...
-                'un',true));
-            
-            text_width = max_widht_string * ...
-                gui.popupmenu_calibration.FontSize;
-            
-            set(gui.layout.settings_grid,...
-            'Widths',[text_width 3*gui.default_height]);
-        
-            new_width = gui.layout.settings.Position(3);
-        
-            % By changing the width of this column, in order for the gui
-            % not to break we must increase the width of the whole window
-            % and move the second column accordingly.
-        
-        
-        else
-            % On windows (and maybe mac) this is standardized and works
-            % well.
-            % Defining column widths:
-            
-             set(gui.layout.settings_grid,...
-            'Widths',[8 3]*gui.default_height);
-        end
+%         gui.populateOptions();
+%         
+%         if isunix
+%             % To avoid clipping strings we must compute the correct width
+%             % of the boxes
+% 
+%             max_widht_string = ...
+%                 max(cellfun(@(x)(length(x)),...
+%                 gui.popupmenu_calibration.String,...
+%                 'un',true));
+%             
+%             text_width = max_widht_string * ...
+%                 gui.popupmenu_calibration.FontSize;
+%             
+%             set(gui.layout.settings_grid,...
+%             'Widths',[text_width 3*gui.default_height]);
+%         
+%             % By changing the width of this column, in order for the gui
+%             % not to break we must increase the width of the whole window
+%             % and move the second column accordingly.
+%         
+%         
+%         else
+%             % On windows (and maybe mac) this is standardized and works
+%             % well.
+%             % Defining column widths:
+%             
+%              set(gui.layout.settings_grid,...
+%             'Widths',[8 3]*gui.default_height);
+%         end
         
         % Remaining Controls outside of grid:
         uicontrol(gui.layout.settings,...

@@ -99,7 +99,7 @@ classdef (Sealed) LocoMouse_GUI < handle
                 gui.validateDirStructure();
                 gui.validateVideoReader();
                 gui.createLayout();
-                loadRecoverySettings(gui)
+                loadRecoverySettings(gui);
                 
                 clear gui;
                 
