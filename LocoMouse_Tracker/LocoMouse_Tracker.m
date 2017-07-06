@@ -560,20 +560,7 @@ try
     % file_name = char(strtrim(file_list{i_files}));
     [~,trial_name,~] = fileparts(file_name);
     [out_path_data,out_path_image] = feval(output_fun,output_path,file_name);
-    
-    data_file_name = fullfile(out_path_data,[trial_name '.mat']);
-    image_file_name = fullfile(out_path_image,[trial_name '.png']);
-    %clear trial_name;
-    
-    % Check if data folder exists:
-    if ~exist(out_path_data,'dir')
-        mkdir(out_path_data);
-    end
-    % Check if image folder exists:
-    if ~exist(out_path_image,'dir')
-        mkdir(out_path_image);
-    end
-    
+       
     if get(checkbox_overwrite_results,'Value') || ...
             (~exist(data_file_name,'file') && ~exist(image_file_name,'file'))
         
@@ -644,11 +631,21 @@ try
         [final_tracks,tracks_tail] = convertTracksToUnconstrainedView(final_tracks_c,tracks_tail_c,size(data.ind_warp_mapping),data.ind_warp_mapping,data.flip,data.scale);
         
         % Saving tracking data:
-        save(data_file_name,'final_tracks','tracks_tail','final_tracks_c','tracks_tail_c','debug','data');
+           data_file_name = fullfile(out_path_data,[trial_name '.mat']);
+           if ~exist(out_path_data,'dir') % Make data folder if necessary
+               mkdir(out_path_data);
+           end
+           
+           save(data_file_name,'final_tracks','tracks_tail','final_tracks_c','tracks_tail_c','debug','data');
         
         % Saving data plot figures
-        if export_figures
-            MTF_export_figures(final_tracks_c, tracks_tail_c, data_file_name, data);
+        if export_figures            
+            % Check if image folder exists:
+            image_file_name = fullfile(out_path_image,[trial_name '.png']);
+            if ~exist(out_path_image,'dir')
+                mkdir(out_path_image);
+            end
+            MTF_export_figures(final_tracks_c, tracks_tail_c, image_file_name, data);
         end
         
         % FIXME Performing swing and stance detection:
@@ -1447,10 +1444,6 @@ for i_files = 1:N_files
     
     fprintf(fid,[file_name '\n']);
 end
-
-
-% >>>>>>> upstream/master
-
 
 
 % --- Executes on button press in CreateBackgroundImage.
