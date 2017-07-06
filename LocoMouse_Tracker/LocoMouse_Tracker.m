@@ -598,7 +598,7 @@ try
                 % [DE playing with different automatic background settings...]
                 
                 vid = VideoReader(file_name);
-                if vid.Duration*vid.FrameRate > 1000
+                if vid.Duration*vid.FrameRate > 1002
                     FramesToUse = [(vid.Duration*vid.FrameRate)-1000 Inf]; % using the last 1000 frames
                 else
                     FramesToUse = [2 Inf]; % or all of them
