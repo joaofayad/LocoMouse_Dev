@@ -540,8 +540,7 @@ if ~isnan(new_split_line)
     
     if change
         set(handles.figure1,'UserData',userdata);
-        plotBoxImage(handles,1);
-        plotBoxImage(handles,2);
+        plotBoxImage(handles);
         updatePosition(handles);
     end
     set(handles.edit_split_line,'String',num2str(new_split_line));
@@ -591,7 +590,7 @@ pos = userdata.data.tracks(:,userdata.data.current_frame,:);
 vis = userdata.data.visibility(userdata.data.current_frame);
 
 if get(handles.radiobutton_distorted,'Value')
-    pos = warpPointCoordinates(pos([2 1],:)',userdata.data.inv_ind_warp_mapping,size(userdata.data.inv_ind_warp_mapping));
+    pos = warpPointCoordinates(pos([2 1],:)',userdata.data.inv_ind_warp_mapping,size(userdata.data.inv_ind_warp_mapping),false);
     pos = reshape(pos(:,[2 1])',[2 1 2]);
 end
 
@@ -1144,7 +1143,7 @@ if vis
     pos = userdata.data.tracks(:,userdata.data.current_frame,:);
     
     if get(handles.radiobutton_distorted,'Value')
-        pos = warpPointCoordinates(pos([2 1],:)',userdata.data.inv_ind_warp_mapping,size(userdata.data.inv_ind_warp_mapping));        
+        pos = warpPointCoordinates(pos([2 1],:)',userdata.data.inv_ind_warp_mapping,size(userdata.data.inv_ind_warp_mapping), false);        
         pos = reshape(pos(:,[2 1])',[2 1 2]);
     end
     set(userdata.plot_handles,'Visible','on');
