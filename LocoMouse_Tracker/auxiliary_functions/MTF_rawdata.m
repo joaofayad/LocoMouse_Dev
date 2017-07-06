@@ -146,6 +146,7 @@ flip = data.flip;
 parfor i_images = 1:N_frames
    
       [I,Iaux] = readMouseImage(vid,i_images,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
+
     
     % To change bounding box computation, see READ_BEFORE_CHANGING_ANYTHING.m 
     % in ... \LocoMouse_Dev\LocoMouse_Tracker\boundingBoxFunctions  [DE]
@@ -214,6 +215,7 @@ parfor i_images = 1:N_frames
     bounding_box_i = bounding_box(:,i_images);
      
     [~,Iaux] = readMouseImage(vid,i_images,Bkg,data.flip,scale,ind_warp_mapping,expected_im_size);
+
     I_cell = cell(1,2);
     [I_cell{[2 1]}] = splitImage(Iaux,split_line);
     
