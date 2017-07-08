@@ -620,12 +620,12 @@ try
             if ispc
                 cpp_exect = fullfile(root_path,'auxiliary_functions','cpp','Locomouse.exe');
                 calib = rmfield(data,{'vid','bkg','flip'});
-                [final_tracks_c, tracks_tail_c,data,debug] = locomouse_tracker_cpp_wrapper(data,root_path,model, calib, data.flip, model_file, calibration_file, cpp_exect, cpp_config_file, output_path);
+                [final_tracks_c, tracks_tail_c,data,debug_info] = locomouse_tracker_cpp_wrapper(data,root_path,model, calib, data.flip, model_file, calibration_file, cpp_exect, cpp_config_file, output_path);
             else
                 error('Only windows is supported so far. Compile the C++ code in the current platform and insert the call here.');
             end
         else
-            [final_tracks_c,tracks_tail_c,data,debug] = MTF_rawdata(data, model, bounding_box_choice);
+            [final_tracks_c,tracks_tail_c,data,debug_info] = MTF_rawdata(data, model, bounding_box_choice);
         end
         
         [final_tracks,tracks_tail] = convertTracksToUnconstrainedView(final_tracks_c,tracks_tail_c,size(data.ind_warp_mapping),data.ind_warp_mapping,data.flip,data.scale);
@@ -636,7 +636,7 @@ try
                mkdir(out_path_data);
            end
            
-           save(data_file_name,'final_tracks','tracks_tail','final_tracks_c','tracks_tail_c','debug','data');
+           save(data_file_name,'final_tracks','tracks_tail','final_tracks_c','tracks_tail_c','debug_info','data');
         
         % Saving data plot figures
         if export_figures            

@@ -60,7 +60,7 @@
 %% [2] Treadmill setup (Dana) [rewritten by DE]
     tON = tON+1; % don't edit
     ComputeMouseBox_option(tON) = {'Treadmill [Dana] (DE)'};
-    ComputeMouseBox_cmd_string(tON) = {'[bounding_box(:,:,1), cc, I_crop] =  computeMouseBox_TM_DE_V1(Iaux,split_line);'};    
+    ComputeMouseBox_cmd_string(tON) = {'[bounding_box(:,:,1), cc, I_crop] =  computeMouseBox_TM_JF(Iaux,split_line);'};    
     WeightSettings{tON} = weight_defaults;
 
 %% [3] Headfixed (hard coded) (Hugo)
