@@ -522,7 +522,7 @@ for i_tracks = 1:N_pointlike_tracks
     tracks_joint2 = cell(1,N_frames);
     
     % Computing unary potentials:
-    for i_images = 1:N_frames
+    parfor i_images = 1:N_frames
         if M(i_tracks,i_images) <= size(tracks_bottom{i_point,i_images},2)
             % If there is bottom view candidate:
             candidates = all(bsxfun(@eq,tracks_joint{i_point,i_images}(1:2,:),tracks_bottom{i_point,i_images}(1:2,M(i_tracks,i_images))),1);
