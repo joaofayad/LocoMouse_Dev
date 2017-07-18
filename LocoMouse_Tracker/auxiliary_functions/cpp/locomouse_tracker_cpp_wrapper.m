@@ -46,7 +46,7 @@ result = system(sprintf('"%s" "%s" "%s" "%s" "%s" "%s" "%s" %s "%s"',...
     char_flip,...
     output_path));
 
-if result < 0
+if result ~= 0
     error('Cpp code failed!');
 end
 

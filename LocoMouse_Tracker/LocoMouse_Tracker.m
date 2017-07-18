@@ -428,35 +428,19 @@ set(handles.disable_with_start,'Enable','off');
 set(handles.enable_with_start,'Enable','on');
 % reset_gui_state = onCleanup(@()());
 drawnow;
-tfile_list = get(handles.listbox_files,'String');
-file_list = cell(size(tfile_list,1),1);
-for tfl_i = 1:size(tfile_list,1)
-    file_list{tfl_i} = strtrim(tfile_list(tfl_i,:));
-end
-clear('tfile_list');
-Nfiles = size(file_list,1);
 
-% Calibration file;
-calibration_file_pos = get(handles.popupmenu_calibration_files,'Value');
-calibration_file = get(handles.popupmenu_calibration_files,'String');
-calibration_file = calibration_file{calibration_file_pos};
-handles = loadCalibrationFile(fullfile(handles.calibration_path,[calibration_file '.mat']),handles);
+% Reading info from the GUI: 
+gui_status = readGUIStatus(handles);
 
-% Model file:
-model_file_pos = get(handles.popupmenu_model,'Value');
-model_file = get(handles.popupmenu_model,'String');
-model_file = model_file{model_file_pos};
-handles = loadModel(fullfile(handles.model_path,[model_file '.mat']),handles);
+% Load the calibration: The calibration matrix is saved with the output so
+% all the parameters are in the result.
+handles = loadCalibrationFile(...
+    fullfile(...
+    handles.calibration_path,[gui_status.calibration_file '.mat']),...
+    handles);
 
-% Output and background functions:
-bkg_mode = get(handles.popupmenu_background_mode,'Value');
-output_mode = get(handles.popupmenu_output_mode,'Value');
-bkg_fun = get(handles.popupmenu_background_mode,'String');bkg_fun = bkg_fun{bkg_mode};
-output_fun = get(handles.popupmenu_output_mode,'String');output_fun = output_fun{output_mode};
 
-% Reading output path:
-output_path = get(handles.edit_output_path,'String');
-
+% Opening the parallel pool:
 try
     if isempty(gcp('nocreate'))
         parpool('open');
@@ -465,148 +449,171 @@ catch
     parpool('local');
 end
 drawnow;
-fprintf('Processing %d video files:\n',Nfiles);
 
-total_time = tic;
+% FIXME: CPP Is triggered by having a cell defining the background
+% method. This is a hack to comply with former design, but should be
+% redesigned to be less error prone and more flexible.
+is_cpp = iscell(gui_status.bb_cmd_string);
 
-bb_choice = get(handles.BoundingBox_choice,'Value');
-[p_boundingBoxFunctions, ~, ~] = fileparts(which('computeMouseBox')); % find the folder containing BoundingBoxOptions.mat
-load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'ComputeMouseBox_cmd_string','ComputeMouseBox_option'); % load bounding box option information
-
-% Checking which side the mouse faces:
-switch handles.MouseOrientation.Value
-    case 2
-        handles.data.flip = 'LR';
-    case 3
-        handles.data.flip = false;
-    case 4
-        handles.data.flip = true;
+if ~exist(gui_status.output_path,'dir')
+    mkdir(gui_status.output_path);
 end
 
-successful_tracking = true(1,Nfiles);
+N_files = length(gui_status.file_list);
+successful_tracking = true(1,N_files);
+fprintf('Processing %d video files:\n', N_files);
+total_time = tic;
 
-% Checking if running C++ code: [joaofayad]
-if iscell(ComputeMouseBox_cmd_string{bb_choice})
-    % FIXME: CPP Is triggered by having a cell defining the background
-    % method. This is a hack to comply with former design, but should be
-    % redesigned to be less error prone and more flexible.
+if is_cpp
     
-    cpp_params.cpp_root_path = fullfile(...
-        handles.root_path,...
-        'auxiliary_functions',...
-        'cpp',...
-        filesep);
-    
-    cpp_params.config_file = fullfile(...
-        cpp_params.cpp_root_path,...
-        ComputeMouseBox_cmd_string{bb_choice}{3});
-    
-    cpp_params.cpp_mode = ComputeMouseBox_cmd_string{bb_choice}{2};
-    
-    [~,model_file_name,~] = fileparts(model_file);
-    [~,calibration_file_name,~] = fileparts(calibration_file);
-    
-    % Converting the MAT files for model and calibration into YML files to
-    % be loaded using the OpenCV library in C++.
-    model_file_yml = fullfile(...
-        handles.root_path,...
-        'model_files',...
-        [model_file_name,'.yml']);
-    
-    calibration_file_yml = fullfile(...
-        handles.root_path,...
-        'calibration_files',...
-        [calibration_file_name,'.yml']);
-    
-    if ~exist(model_file_yml,'file')
-        exportLocoMouseModelToOpenCV(model_file_yml, handles.model);
-    end
-    
-    if ~exist(calibration_file_yml,'file')
-        exportLocoMouseCalibToOpenCV(calibration_file_yml, handles.calib);
-    end
-    
-    % CPP parameters:
-    if ispc()
-        cpp_params.cpp_binary = fullfile(...
-            cpp_params.cpp_root_path,...
-            'Locomouse.exe');
-        
-    else
-        error('C++ algorithm are only supported in Windows at the moment.');
-    end
-    
-    if (handles.MouseOrientation.Value == 1)
-        error('Autodetect does not work with C++!');
-    end
+    % Configure the CPP tracker:
+    [cpp_params,...
+    model_file_yml,...
+    calibration_file_yml,...
+    handles] = configureLocoMouse_Cpp(handles, gui_status);
     
     % CPP code: remove from handles structure to avoid excessive data
     % transfer to parfor.
     data = handles.data;
-    overwrite_results = handles.checkbox_overwrite_results;
-    export_figures = handles.checkbox_ExpFigures.Value;
-    CreateBackgroundImage = handles.CreateBackgroundImage.Value;
-
-    parfor i_files = 1:Nfiles
-        file_name = char(strtrim(file_list{i_files}));
+    
+    for i_files = 1:N_files
+        file_name = char(strtrim(gui_status.file_list{i_files}));
         successful_tracking(i_files) = track_MATLAB_CPP(...
             data,...
             model_file_yml,...
             calibration_file_yml,...
             file_name,...
-            output_fun,...
-            output_path,...
-            bkg_fun,...
-            CreateBackgroundImage, ...
-            overwrite_results,...
-            export_figures,...
-            [],... % BB choice, already processed.
+            gui_status.flip,...
+            gui_status.output_fun,...
+            gui_status.output_path,...
+            gui_status.bkg_fun,...
+            gui_status.CreateBackgroundImage, ...
+            gui_status.overwrite_results,...
+            gui_status.export_figures,...
             true,... % Is cpp
             cpp_params);
     end
 else
+    % Configure the MATLAB tracker:
+    [matlab_params,...
+        handles] = configureLocoMouse_MATLAB(handles, gui_status);
+    
     % MATLAB code:
-    for i_files = 1:Nfiles
-        file_name = char(strtrim(file_list{i_files}));
+    for i_files = 1:N_files
+        file_name = char(strtrim(gui_status.file_list{i_files}));
         successful_tracking(i_files) = track_MATLAB_CPP(...
             handles.data,...
             handles.model,...
-            calibration_file,...
+            '',...
             file_name,...
-            output_fun,...
-            output_path,...
-            bkg_fun,...
-            handles.CreateBackgroundImage.Value,...
-            handles.checkbox_overwrite_results,...
-            handles.checkbox_ExpFigures.Value,...
-            handles.BoundingBox_choice.Value,...
+            gui_status.flip,...
+            gui_status.output_fun,...
+            gui_status.output_path,...
+            gui_status.bkg_fun,...
+            gui_status.CreateBackgroundImage,...
+            gui_status.overwrite_results,...
+            gui_status.export_figures,...
             false,... %Not cpp
-            []); % No need for cpp_params
+            matlab_params); % No need for cpp_params
     end
 end
 
-fprintf('%d out of %d files correctly processed.\n',sum(successful_tracking),Nfiles);
+fprintf('%d out of %d files correctly processed.\n',sum(successful_tracking),N_files);
 fprintf('Total run time: ');
 disp(datestr(datenum(0,0,0,0,0,toc(total_time)),'HH:MM:SS'))
 disp('------------------[Tracking END]----');
 set(handles.disable_with_start,'Enable','on');
 set(handles.enable_with_start,'Enable','off');
 
-function successful_tracking = track_MATLAB_CPP(...
-    data,...
-    model,... % structure for MATLAB, yml path for CPP
-    calibration_file,... % path
-    file_name,...
-    output_fun,...
-    output_path,...
-    bkg_fun,...
-    make_bkg,...
-    checkbox_overwrite_results,...
-    export_figures,...
-    bounding_box_choice,...
-    is_cpp,...
-    cpp_params)
 
+
+% === Configuring MATLAB and C++ algorithms:
+function [matlab_params,...
+    handles] = configureLocoMouse_MATLAB(handles, gui_status)
+
+% Loading the model:
+handles = loadModel(fullfile(handles.root_path,'model_files',[gui_status.model_file '.mat']),handles);
+
+% MATLAB parameters:
+matlab_params.bb_cmd_string = gui_status.bb_cmd_string;
+matlab_params.bb_weights = gui_status.bb_weights;
+
+
+function [cpp_params,...
+    model_file_yml,...
+    calibration_file_yml,...
+    handles] = configureLocoMouse_Cpp(handles, gui_status)
+% FIXME: CPP Is triggered by having a cell defining the background
+% method. This is a hack to comply with former design, but should be
+% redesigned to be less error prone and more flexible.
+
+cpp_params.cpp_root_path = fullfile(...
+    handles.root_path,...
+    'auxiliary_functions',...
+    'cpp',...
+    filesep);
+
+cpp_params.config_file = fullfile(...
+    cpp_params.cpp_root_path,...
+    gui_status.bb_cmd_string{3});
+
+cpp_params.cpp_mode = gui_status.bb_cmd_string{2};
+
+[~,model_file_name,~] = fileparts(gui_status.model_file);
+[~,calibration_file_name,~] = fileparts(gui_status.calibration_file);
+
+% Converting the MAT files for model and calibration into YML files to
+% be loaded using the OpenCV library in C++.
+model_file_yml = fullfile(...
+    handles.root_path,...
+    'model_files',...
+    [model_file_name,'.yml']);
+
+calibration_file_yml = fullfile(...
+    handles.root_path,...
+    'calibration_files',...
+    [calibration_file_name,'.yml']);
+
+if ~exist(model_file_yml,'file')
+    handles = loadModel(fullfile(handles.root_path,'model_files',[gui_status.model_file '.mat']),handles);
+    exportLocoMouseModelToOpenCV(model_file_yml, handles.model);
+end
+
+if ~exist(calibration_file_yml,'file')
+    %%% FIXME: The calibration is not stored by itself. Instead it is mixed
+    %%% in the handles.data structure. As it is, other fields that do not
+    %%% belong to the calibration will be processed and return warnings.
+    exportLocoMouseCalibToOpenCV(calibration_file_yml, handles.data);
+end
+
+% CPP parameters:
+if ispc()
+    cpp_params.cpp_binary = fullfile(...
+        cpp_params.cpp_root_path,...
+        'Locomouse.exe');
+    
+else
+    error('C++ algorithm are only supported in Windows at the moment.');
+end
+
+if isstring(gui_status.flip) && strcmpi(gui_status.flip,'compute')
+    error('Autodetect does not work with C++!');
+end
+
+
+function successful_tracking = track_MATLAB_CPP(data,...
+                                                model,...
+                                                calibration_file,...
+                                                file_name,...
+                                                flip,...
+                                                output_fun,...
+                                                output_path,...
+                                                bkg_fun,...
+                                                make_bkg,...
+                                                overwrite_results,...
+                                                export_figures,...
+                                                is_cpp,...
+                                                params)
 try
     successful_tracking = true;
     % Going over the file list:
@@ -617,8 +624,8 @@ try
     data_file_name = fullfile(out_path_data,[trial_name '.mat']);
     image_file_name = fullfile(out_path_image,[trial_name '.png']);
 
-    if get(checkbox_overwrite_results,'Value') || ...
-            (~exist(data_file_name,'file') && ~exist(image_file_name,'file'))
+    if overwrite_results || ...
+        (~exist(data_file_name,'file') && ~exist(image_file_name,'file'))
         
         % CHECK FOR BACKGROUND IMAGE AND CREATE ONE IF NECESSARY
         % Checks if indicated file exists, then checks if sameName file
@@ -678,16 +685,16 @@ try
                     data,...
                     model,...
                     calibration_file,...
-                    data.flip,...
+                    flip,...
                     output_path,...
-                    cpp_params);
+                    params);
                 
         else
             [final_tracks_c,tracks_tail_c,data,debug_info] = ...
                 MTF_rawdata(...
                 data,...
                 model,...
-                bounding_box_choice);
+                params);
             
         end
         
@@ -1153,9 +1160,9 @@ function pushbutton_cluster_Callback(hObject, eventdata, handles)
 %%FIXME: Check how to make sure whe have access to the cluster on the
 %%current machine.
 
-if ~isunix
-    error('LocoMouse_Tracker supports sending jobs to a OpenLava framework running on Linux only. For more details see the documentation.');
-end
+% if ~isunix
+%     error('LocoMouse_Tracker supports sending jobs to a OpenLava framework running on Linux only. For more details see the documentation.');
+% end
 
 % FIXME: OpenLava Server configurations should be performed in some config
 % file.
@@ -1167,21 +1174,21 @@ cluster_opts.calibration = fullfile(cluster_opts.root, 'configuration_files');
 cluster_opts.config = fullfile(cluster_opts.root, 'calibration_files');
 cluster_opts.job_path = fullfile(cluster_opts.root,cluster_opts.job_name);
 
-if ~exist(cluster_opts.job_path,'dir')
-    mkdir(cluster_opts.job_path);
-end
+% if ~exist(cluster_opts.job_path,'dir')
+%     mkdir(cluster_opts.job_path);
+% end
+% 
+% if ~exist(cluster_opts.mirror_folder,'dir')
+%     error('Could not find "/mirror". LocoMouse_Tracker expects an OpenLava installation with a particular configuration. For more details see the documentation.');
+% end
 
-if ~exist(cluster_opts.mirror_folder,'dir')
-    error('Could not find "/mirror". LocoMouse_Tracker expects an OpenLava installation with a particular configuration. For more details see the documentation.');
-end
-
-GUI_STATUS = readGUIStatus(handles);
+gui_status = readGUIStatus(handles);
 
 % FIXME: Implement function that makes all the model, calib, and config
 % files available to the cluster.
-job_file = prepareCluster(handles, cluster_opts, GUI_STATUS);
+job_file = configureCluster(handles, cluster_opts, gui_status);
 
-N_files = size(GUI_STATUS.video_list,1);
+N_files = size(gui_status.video_list,1);
 
 % Submit the job array:
 disp('----------------[Submitting job to cluster]----');
@@ -1255,83 +1262,185 @@ if ~exist(calibration_file_yml,'file')
 end
 
 % =========
-function GUI_STATUS = readGUIStatus(handles)
+function [bb_cmd_string, bb_weight] = boundingBoundingBoxChoice(handles)
+% Parses the bounding box information (including the choice between MATLAB
+% and C++ algorithms).
 
-% FIXME: This check should also be done with a function from handles...
-% Checking C++ locomouse mode: [joaofayad]
+% Load the config file BoundingBoxOptions.mat
 bb_choice = get(handles.BoundingBox_choice,'Value');
-[p_boundingBoxFunctions, ~, ~] = fileparts(which('computeMouseBox')); % find the folder containing BoundingBoxOptions.mat
-load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'ComputeMouseBox_cmd_string','ComputeMouseBox_option'); % load bounding box option information
+[p_boundingBoxFunctions, ~, ~] = fileparts(which('computeMouseBox'));
 
-bb_options = load(fullfile(handles.bounding_box_path,'BoundingBoxOptions.mat'),'ComputeMouseBox_cmd_string','ComputeMouseBox_option');
+load(fullfile(p_boundingBoxFunctions,'BoundingBoxOptions.mat'),...
+    'ComputeMouseBox_cmd_string',...
+    'ComputeMouseBox_option',...
+    'WeightSettings');
 
-if iscell(bb_options.ComputeMouseBox_cmd_string{bb_choice})
-    cpp_config_file = fullfile(handles.cpp_root_path, bb_options.ComputeMouseBox_cmd_string{bb_choice}{2});
-else
+bb_cmd_string = ComputeMouseBox_cmd_string{bb_choice};
+bb_weight = WeightSettings{bb_choice};
+
+% FIXME: CPP Is triggered by having a cell defining the background
+% method. This is a hack to comply with former design, but should be
+% redesigned to be less error prone and more flexible.
+is_cpp = iscell(bb_cmd_string);
+cpp_params = [];
+
+if is_cpp
+    % CPP parameters:
+    cpp_params.cpp_root_path = fullfile(...
+        handles.root_path,...
+        'auxiliary_functions',...
+        'cpp',...
+        filesep);
     
-    error('The cluster can only run the C++ version of the code.');
+    cpp_params.config_file = fullfile(...
+        cpp_params.cpp_root_path,...
+        bb_cmd_string{3});
+    
+    cpp_params.cpp_mode = bb_cmd_string{2};
+    
+    if ispc()
+        cpp_params.cpp_binary = fullfile(...
+            cpp_params.cpp_root_path,...
+            'Locomouse.exe');
+        
+    else
+        error('C++ algorithm are only supported in Windows at the moment.');
+    end
+  
 end
 
-bkg_mode = get(handles.popupmenu_background_mode,'Value');
-bkg_fun = get(handles.popupmenu_background_mode,'String');
 
-output_mode = get(handles.popupmenu_output_mode,'Value');
-output_fun = get(handles.popupmenu_output_mode,'String');
+% === Reading the GUI options:
+function gui_status = readGUIStatus(handles)
+% Parses the options chosen on the GUI and "translates" those options into
+% the appropriate internal variables for tracking.
 
-%%% FIXME: Implement a function to compute this on handles somewhere
-% Checking which side the mouse faces:
-switch handles.MouseOrientation.Value
-    case 2
-        flip_char = 'LR';
-    case 3
-        flip_char = 'R';
-    case 4
-        flip_char = 'L';
+% Options that influence how tracking is performed:
+gui_status = struct('bb_cmd_string','',...
+    'model_file','',...
+    'calibration_file','',...
+    'bkg_fun','',...
+    'output_fun','',...
+    'output_path','',...
+    'flip',[],...
+    'CreateBackgroundImage',0,...
+    'file_list','',...
+    'export_figures',false,...
+    'overwrite_results',false);
+
+% File list:
+tfile_list = get(handles.listbox_files,'String');
+gui_status.file_list = cell(size(tfile_list,1),1);
+for tfl_i = 1:size(tfile_list,1)
+    gui_status.file_list{tfl_i} = strtrim(tfile_list(tfl_i,:));
 end
+clear('tfile_list');
 
-% Calibration file;
+% BB option (also if MATLAB or C++ algorithm):
+[gui_status.bb_cmd_string,...
+    gui_status.bb_weights] = boundingBoundingBoxChoice(handles);
+
+% Load and configure the Calibration:
 calibration_file_pos = get(handles.popupmenu_calibration_files,'Value');
 calibration_file = get(handles.popupmenu_calibration_files,'String');
-calibration_file = calibration_file{calibration_file_pos};
+gui_status.calibration_file = calibration_file{calibration_file_pos};
 
-% Model file:
+% Load and confiture the Model:
 model_file_pos = get(handles.popupmenu_model,'Value');
 model_file = get(handles.popupmenu_model,'String');
-model_file = model_file{model_file_pos};
+gui_status.model_file = model_file{model_file_pos};
 
-
-GUI_STATUS.cpp_config_file = cpp_config_file; 
-GUI_STATUS.background_function = bkg_fun{bkg_mode};
-GUI_STATUS.output_function = output_fun{output_mode};
-GUI_STATUS.output_path = get(handles.edit_output_path,'String');
-GUI_STATUS.flip_char = flip_char;
-GUI_STATUS.model_file.mat = fullfile(handles.model_path,[model_file '.mat']);
-GUI_STATUS.model_file.yml = fullfile(handles.model_path,[model_file '.yml']);
-GUI_STATUS.calibration_file.mat = fullfile(handles.calibration_path, [calibration_file '.mat']);
-GUI_STATUS.calibration_file.yml = fullfile(handles.calibration_path, [calibration_file '.yml']);
-GUI_STATUS.video_list = get(handles.listbox_files,'String');
-
-%%% FIXME: Make the mouse option a function of the file name in other
-%%% places of the code.
-if length(flip_char) > 1
-    GUI_STATUS.flip_function = @(file_name)(file_name(find(file_name == '.',1,'last') - 1));
-else
-    GUI_STATUS.flip_function = [];
+% Configure Mouse orientation:
+% Checking which side the mouse faces:
+switch handles.MouseOrientation.Value
+    case 1
+        gui_status.flip = 'compute';
+    case 2
+        gui_status.flip = 'LR';
+    case 3
+        gui_status.flip = false;
+    case 4
+        gui_status.flip = true;
 end
 
-function job_file = prepareCluster(handles, cluster_opts, GUI_STATUS)
+% Configure Output function:
+output_mode = get(handles.popupmenu_output_mode,'Value');
+output_fun = get(handles.popupmenu_output_mode,'String');
+gui_status.output_fun = output_fun{output_mode};
+
+% Configure Bkg Mode function:
+bkg_mode = get(handles.popupmenu_background_mode,'Value');
+bkg_fun = get(handles.popupmenu_background_mode,'String');
+gui_status.bkg_fun = bkg_fun{bkg_mode};
+
+% Configure Output path:
+gui_status.output_path = get(handles.edit_output_path,'String');
+
+% Configure Background Image creation:
+gui_status.CreateBackgroundImage = handles.CreateBackgroundImage.Value;
+
+% Configure overwirte results:
+gui_status.overwrite_results = handles.checkbox_overwrite_results.Value;
+
+% Configure export figures:
+gui_status.export_figures = handles.checkbox_ExpFigures.Value;
+
+
+% %%% OLD CODE THAT MUST BE REUSED SOMEWHERE
+% GUI_STATUS.cpp_config_file = cpp_config_file; 
+% GUI_STATUS.background_function = bkg_fun{bkg_mode};
+% GUI_STATUS.output_function = output_fun{output_mode};
+% GUI_STATUS.output_path = get(handles.edit_output_path,'String');
+% GUI_STATUS.flip_char = flip_char;
+% GUI_STATUS.model_file.mat = fullfile(handles.model_path,[model_file '.mat']);
+% GUI_STATUS.model_file.yml = fullfile(handles.model_path,[model_file '.yml']);
+% GUI_STATUS.calibration_file.mat = fullfile(handles.calibration_path, [calibration_file '.mat']);
+% GUI_STATUS.calibration_file.yml = fullfile(handles.calibration_path, [calibration_file '.yml']);
+% GUI_STATUS.video_list = get(handles.listbox_files,'String');
+% 
+% %%% FIXME: Make the mouse option a function of the file name in other
+% %%% places of the code.
+% if length(flip_char) > 1
+%     GUI_STATUS.flip_function = @(file_name)(file_name(find(file_name == '.',1,'last') - 1));
+% else
+%     GUI_STATUS.flip_function = [];
+% end
+
+function job_file = configureCluster(handles, cluster_opts, GUI_STATUS)
 % Copy yml files to the cluster folders so it is accessible to all workers:
 
+model_file_mat = fullfile(...
+    handles.root_path,...
+    'model_files',...
+    [GUI_STATUS.model_file '.mat']);
+
+model_file_yml = model_file_mat;
+model_file_yml(end-2:end) = 'yml';
+
+calibration_file_mat = fullfile(...
+    handles.root_path,...
+    'calibration_files',...
+    [GUI_STATUS.calibration_file '.mat']);
+
+calibration_file_yml = calibration_file_mat;
+calibration_file_yml(end-2:end) = 'yml';
+
 % Check if one needs to convert files to yml:
-if ~exist(GUI_STATUS.model_file.yml,'file')
-    exportLocoMouseModelToOpenCV(GUI_STATUS.model_file.yml,load(GUI_STATUS.model_file.mat));
+if ~exist(model_file_yml,'file')
+    exportLocoMouseModelToOpenCV(model_file_yml,load(model_file_mat));
 end
 
-if ~exist(GUI_STATUS.calibration_file.yml,'file')
-    exportLocoMouseCalibToOpenCV(GUI_STATUS.calibration_file.yml,load(GUI_STATUS.calibration_file.mat));
+if ~exist(calibration_file_yml,'file')
+    exportLocoMouseCalibToOpenCV(calibration_file_yml,...
+        load(calibration_file_mat));
 end
 
-files_to_copy = {GUI_STATUS.calibration_file.yml, GUI_STATUS.model_file.yml, GUI_STATUS.cpp_config_file};
+cpp_config_file = fullfile(...
+    cpp_params.cpp_root_path,...
+    gui_status.bb_cmd_string{3});
+
+
+files_to_copy = {calibration_file_yml, model_file_yml, cpp_config_file};
 field_list = {'calibration', 'models', 'config'};
 destination_folders = {cluster_opts.calibration, cluster_opts.models, cluster_opts.config};
 
@@ -1349,6 +1458,8 @@ for i_files = 1:3
 end
 
 % Create the file to convert yml results to mat results:
+GUI_STATUS.model_file_mat = model_file_mat;
+GUI_STATUS.calibration_file_mat = calibration_file_mat;
 convertResults(handles, cluster_opts, GUI_STATUS);
 
 % Create the auxiliary files:
@@ -1361,8 +1472,8 @@ job_file = openLavaJobArray(cluster_opts, GUI_STATUS, video_file, background_fil
 % ------ Converts the ylm c++ results into matfiles after each job 
 function convertResults(handles, cluster_opts, GUI_STATUS)
 
-C = load(GUI_STATUS.calibration_file.mat);
-M = load(GUI_STATUS.model_file.mat);
+C = load(GUI_STATUS.calibration_file_mat);
+M = load(GUI_STATUS.model_file_mat);
 
 data.split_line = C.split_line;
 data.mirror_line = data.split_line;
@@ -1377,7 +1488,7 @@ data.model = M;
 data.IDX = C.ind_warp_mapping;
 data.ind_warp_mapping = C.ind_warp_mapping;
 data.inv_ind_warp_mapping = C.inv_ind_warp_mapping;
-data.flip = GUI_STATUS.flip_char == 'L';
+data.flip = GUI_STATUS.flip;
 data.vid = [];
 data.bkg = [];
 
@@ -1414,11 +1525,11 @@ function job_file = openLavaJobArray(cluster_opts, GUI_STATUS, video_file, backg
 job_name_stem = fullfile(cluster_opts.job_path,cluster_opts.job_name);
 
 % If .err and .out files exist, delete them:
-if exist(sprintf('%s.out',job_name_stem),'file');
+if exist(sprintf('%s.out',job_name_stem),'file')
     delete(sprintf('%s.out',job_name_stem));
 end
 
-if exist(sprintf('%s.err',job_name_stem),'file');
+if exist(sprintf('%s.err',job_name_stem),'file')
     delete(sprintf('%s.err',job_name_stem));
 end
 
@@ -1440,7 +1551,7 @@ fprintf(job_fid,'file_name=$(sed "${LSB_JOBINDEX}q;d" %s)\n',video_file);
 fprintf(job_fid,'bkg_name=$(sed "${LSB_JOBINDEX}q;d" %s)\n', background_file);
 fprintf(job_fid,'side_char=$(sed "${LSB_JOBINDEX}q;d" %s)\n',side_file);
 fprintf(job_fid,'echo "$file_name"\n');
-fprintf(job_fid,'"%s" "%s" "${file_name}" "${bkg_name}" "%s" "%s" "${side_char}" "%s";\n',fullfile(cluster_opts.root,'LocoMouse'), cluster_opts.config_cluster_file_path, cluster_opts.models_cluster_file_path,cluster_opts.calibration_cluster_file_path, GUI_STATUS.output_path);
+fprintf(job_fid,'"%s" %s "%s" "${file_name}" "${bkg_name}" "%s" "%s" "${side_char}" "%s";\n',fullfile(cluster_opts.root,'LocoMouse'), cpp_params.cpp_mode ,cluster_opts.config_cluster_file_path, cluster_opts.models_cluster_file_path,cluster_opts.calibration_cluster_file_path, GUI_STATUS.output_path);
 
 % Calling a MATLAB script to convert yml results to mat.
 fprintf(job_fid,'matlab -nodesktop -nodisplay -r "cd ''%s''; tempclusterjob(''%s'',''$file_name'',''$bkg_name'',''$side_char'',''%s'');quit;"',...
@@ -1468,7 +1579,7 @@ if isempty(GUI_STATUS.flip_function)
     if isunix
         side_char_list = mat2cell(side_char_list,ones(size(side_char_list,1),1),1);
     elseif ismac 
-        error('MAC is not supported. See here how MAC behaves!');
+        error('MAC is not supported. Correct to see how MAC behaves!');
     end
         
     printFileList(side_file, repmat(GUI_STATUS.flip_char,size(GUI_STATUS.video_list,1),1), []);

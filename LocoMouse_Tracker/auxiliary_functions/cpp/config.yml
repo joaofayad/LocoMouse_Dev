@@ -39,7 +39,7 @@ pairwise_occluded_cost: 0.01 #Cost for moving to and between occluded points on 
 moving_average_window: 5 #Must be odd.
 # Pre-processing of the images before detection: Either provide a reference image to match the histogram or a gray-levle mapping.
 use_reference_image: 0 #0: false, 1: true
-reference_image_path: 'C:\Users\joaofayad\Documents\Visual Studio 2015\Projects\Locomouse\x64\Release\I_TEMPLATE_BOTTOM.png' #If it can't be read the program will halt. 
+reference_image_path: 'I_TEMPLATE_BOTTOM.png' #If it can't be read the program will halt. 
 #
 transform_gray_values: 0 #0: false, 1: true
 gray_value_transformation: !!opencv-matrix
