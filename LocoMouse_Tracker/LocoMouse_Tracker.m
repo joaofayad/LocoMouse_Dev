@@ -593,7 +593,7 @@ if ispc()
         'Locomouse.exe');
     
 else
-    error('C++ algorithm are only supported in Windows at the moment.');
+%     error('C++ algorithm are only supported in Windows at the moment.');
 end
 
 if isstring(gui_status.flip) && strcmpi(gui_status.flip,'compute')
@@ -1188,7 +1188,7 @@ gui_status = readGUIStatus(handles);
 % files available to the cluster.
 job_file = configureCluster(handles, cluster_opts, gui_status);
 
-N_files = size(gui_status.video_list,1);
+N_files = size(gui_status.file_list,1);
 
 % Submit the job array:
 disp('----------------[Submitting job to cluster]----');
@@ -1276,7 +1276,11 @@ load(fullfile(p_boundingBoxFunctions,'BoundingBoxOptions.mat'),...
     'WeightSettings');
 
 bb_cmd_string = ComputeMouseBox_cmd_string{bb_choice};
-bb_weight = WeightSettings{bb_choice};
+if length(WeightSettings) <= bb_choice
+    bb_weight = WeightSettings{bb_choice};
+else
+    bb_weight = [];
+end
 
 % FIXME: CPP Is triggered by having a cell defining the background
 % method. This is a hack to comply with former design, but should be
@@ -1304,7 +1308,7 @@ if is_cpp
             'Locomouse.exe');
         
     else
-        error('C++ algorithm are only supported in Windows at the moment.');
+        warning('C++ algorithm are only supported in Windows at the moment.');
     end
   
 end
@@ -1330,9 +1334,15 @@ gui_status = struct('bb_cmd_string','',...
 
 % File list:
 tfile_list = get(handles.listbox_files,'String');
-gui_status.file_list = cell(size(tfile_list,1),1);
-for tfl_i = 1:size(tfile_list,1)
-    gui_status.file_list{tfl_i} = strtrim(tfile_list(tfl_i,:));
+
+if iscell(tfile_list)
+    gui_status.file_list = tfile_list;
+    
+else
+    gui_status.file_list = cell(size(tfile_list,1),1);
+    for tfl_i = 1:size(tfile_list,1)
+        gui_status.file_list{tfl_i} = strtrim(tfile_list(tfl_i,:));
+    end
 end
 clear('tfile_list');
 
@@ -1352,15 +1362,20 @@ gui_status.model_file = model_file{model_file_pos};
 
 % Configure Mouse orientation:
 % Checking which side the mouse faces:
+gui_status.flip_function = [];
+gui_status.flip_char = '';
 switch handles.MouseOrientation.Value
     case 1
         gui_status.flip = 'compute';
     case 2
         gui_status.flip = 'LR';
+        gui_status.flip_function = @(file_name)(file_name(find(file_name == '.',1,'last') - 1));
     case 3
         gui_status.flip = false;
+        gui_status.flip_char = 'R';
     case 4
         gui_status.flip = true;
+        gui_status.flip_char = 'L';
 end
 
 % Configure Output function:
@@ -1408,41 +1423,47 @@ gui_status.export_figures = handles.checkbox_ExpFigures.Value;
 
 function job_file = configureCluster(handles, cluster_opts, GUI_STATUS)
 % Copy yml files to the cluster folders so it is accessible to all workers:
+% 
+% model_file_mat = fullfile(...
+%     handles.root_path,...
+%     'model_files',...
+%     [GUI_STATUS.model_file '.mat']);
+% 
+% model_file_yml = model_file_mat;
+% model_file_yml(end-2:end) = 'yml';
+% 
+% calibration_file_mat = fullfile(...
+%     handles.root_path,...
+%     'calibration_files',...
+%     [GUI_STATUS.calibration_file '.mat']);
+% 
+% calibration_file_yml = calibration_file_mat;
+% calibration_file_yml(end-2:end) = 'yml';
+% 
+% % Check if one needs to convert files to yml:
+% if ~exist(model_file_yml,'file')
+%     exportLocoMouseModelToOpenCV(model_file_yml,load(model_file_mat));
+% end
+% 
+% if ~exist(calibration_file_yml,'file')
+%     exportLocoMouseCalibToOpenCV(calibration_file_yml,...
+%         load(calibration_file_mat));
+% end
 
-model_file_mat = fullfile(...
-    handles.root_path,...
-    'model_files',...
-    [GUI_STATUS.model_file '.mat']);
+[cpp_params,...
+    model_file_yml,...
+    calibration_file_yml,...
+    handles] = configureLocoMouse_Cpp(handles, GUI_STATUS);
 
-model_file_yml = model_file_mat;
-model_file_yml(end-2:end) = 'yml';
+files_to_copy = {calibration_file_yml,...
+                 model_file_yml,...
+                 cpp_params.config_file};
 
-calibration_file_mat = fullfile(...
-    handles.root_path,...
-    'calibration_files',...
-    [GUI_STATUS.calibration_file '.mat']);
-
-calibration_file_yml = calibration_file_mat;
-calibration_file_yml(end-2:end) = 'yml';
-
-% Check if one needs to convert files to yml:
-if ~exist(model_file_yml,'file')
-    exportLocoMouseModelToOpenCV(model_file_yml,load(model_file_mat));
-end
-
-if ~exist(calibration_file_yml,'file')
-    exportLocoMouseCalibToOpenCV(calibration_file_yml,...
-        load(calibration_file_mat));
-end
-
-cpp_config_file = fullfile(...
-    cpp_params.cpp_root_path,...
-    gui_status.bb_cmd_string{3});
-
-
-files_to_copy = {calibration_file_yml, model_file_yml, cpp_config_file};
 field_list = {'calibration', 'models', 'config'};
-destination_folders = {cluster_opts.calibration, cluster_opts.models, cluster_opts.config};
+
+destination_folders = {cluster_opts.calibration,...
+                       cluster_opts.models,...
+                       cluster_opts.config};
 
 for i_files = 1:3
     
@@ -1458,19 +1479,32 @@ for i_files = 1:3
 end
 
 % Create the file to convert yml results to mat results:
-GUI_STATUS.model_file_mat = model_file_mat;
-GUI_STATUS.calibration_file_mat = calibration_file_mat;
-convertResults(handles, cluster_opts, GUI_STATUS);
+GUI_STATUS.model_file_mat = fullfile(...
+    handles.root_path,...
+    'model_files',...
+    [GUI_STATUS.model_file '.mat']);
+
+GUI_STATUS.calibration_file_mat = fullfile(...
+    handles.root_path,...
+    'calibration_files',...
+    [GUI_STATUS.calibration_file '.mat']);
+
+convertResults(cpp_params, cluster_opts, GUI_STATUS);
 
 % Create the auxiliary files:
 [video_file, background_file, side_file] = filesForOpenLavaJob(cluster_opts, GUI_STATUS);
 
 % Create the job file:
-job_file = openLavaJobArray(cluster_opts, GUI_STATUS, video_file, background_file, side_file);
+job_file = openLavaJobArray(cluster_opts,...
+                            cpp_params,...
+                            GUI_STATUS,...
+                            video_file,...
+                            background_file,...
+                            side_file);
 
 
 % ------ Converts the ylm c++ results into matfiles after each job 
-function convertResults(handles, cluster_opts, GUI_STATUS)
+function convertResults(cpp_params, cluster_opts, GUI_STATUS)
 
 C = load(GUI_STATUS.calibration_file_mat);
 M = load(GUI_STATUS.model_file_mat);
@@ -1497,15 +1531,16 @@ data.bkg = [];
 save(fullfile(cluster_opts.job_path,sprintf('%s.mat',cluster_opts.job_name)),'-struct','data');
 
 % Copying the the track conversions to a folder all nodes can access:
-
 track_conversion_files = {'convertTracksToUnconstrainedView.m','cppToMATLABTracks.m','tempclusterjob.m'};
-
 N_files = length(track_conversion_files);
-
 success = zeros(1,N_files);
 
 for i_files = 1:N_files
-    success(i_files) = copyfile(fullfile(handles.cpp_root_path,track_conversion_files{i_files}),cluster_opts.job_path);
+    
+    success(i_files) = copyfile(...
+        fullfile(cpp_params.cpp_root_path,...
+                 track_conversion_files{i_files}),...
+                 cluster_opts.job_path);
 end
 
 % Deleting auxiliary files if something goes wrong:
@@ -1520,7 +1555,7 @@ if any(success == 0)
     
 end
 
-function job_file = openLavaJobArray(cluster_opts, GUI_STATUS, video_file, background_file, side_file)
+function job_file = openLavaJobArray(cluster_opts, cpp_params, GUI_STATUS, video_file, background_file, side_file)
 
 job_name_stem = fullfile(cluster_opts.job_path,cluster_opts.job_name);
 
@@ -1551,7 +1586,13 @@ fprintf(job_fid,'file_name=$(sed "${LSB_JOBINDEX}q;d" %s)\n',video_file);
 fprintf(job_fid,'bkg_name=$(sed "${LSB_JOBINDEX}q;d" %s)\n', background_file);
 fprintf(job_fid,'side_char=$(sed "${LSB_JOBINDEX}q;d" %s)\n',side_file);
 fprintf(job_fid,'echo "$file_name"\n');
-fprintf(job_fid,'"%s" %s "%s" "${file_name}" "${bkg_name}" "%s" "%s" "${side_char}" "%s";\n',fullfile(cluster_opts.root,'LocoMouse'), cpp_params.cpp_mode ,cluster_opts.config_cluster_file_path, cluster_opts.models_cluster_file_path,cluster_opts.calibration_cluster_file_path, GUI_STATUS.output_path);
+fprintf(job_fid,'"%s" %s "%s" "${file_name}" "${bkg_name}" "%s" "%s" "${side_char}" "%s";\n',...
+    fullfile(cluster_opts.root,'LocoMouse'),...
+    cpp_params.cpp_mode,...
+    cluster_opts.config_cluster_file_path,...
+    cluster_opts.models_cluster_file_path,...
+    cluster_opts.calibration_cluster_file_path,...
+    GUI_STATUS.output_path);
 
 % Calling a MATLAB script to convert yml results to mat.
 fprintf(job_fid,'matlab -nodesktop -nodisplay -r "cd ''%s''; tempclusterjob(''%s'',''$file_name'',''$bkg_name'',''$side_char'',''%s'');quit;"',...
@@ -1564,28 +1605,28 @@ function [video_file, background_file, side_file] = filesForOpenLavaJob(cluster_
 
 % Printing video files:
 video_file = fullfile(cluster_opts.job_path, sprintf('%s_video_list.txt',cluster_opts.job_name));
-printFileList(video_file, GUI_STATUS.video_list,[]);
+printFileList(video_file, GUI_STATUS.file_list,[]);
 
 % Printing Background files:
 background_file = fullfile(cluster_opts.job_path, sprintf('%s_background_list.txt',cluster_opts.job_name));
-printFileList(background_file, GUI_STATUS.video_list, GUI_STATUS.background_function);
+printFileList(background_file, GUI_STATUS.file_list, GUI_STATUS.bkg_fun);
 
 % Printing side files:
 side_file = fullfile(cluster_opts.job_path, sprintf('%s_side_list.txt',cluster_opts.job_name));
 
 if isempty(GUI_STATUS.flip_function)
     
-    side_char_list = repmat(GUI_STATUS.flip_char,size(GUI_STATUS.video_list,1),1);
+    side_char_list = repmat(GUI_STATUS.flip_char,size(GUI_STATUS.file_list,1),1);
     if isunix
-        side_char_list = mat2cell(side_char_list,ones(size(side_char_list,1),1),1);
+        side_char_list = num2cell(side_char_list,2);
     elseif ismac 
         error('MAC is not supported. Correct to see how MAC behaves!');
     end
         
-    printFileList(side_file, repmat(GUI_STATUS.flip_char,size(GUI_STATUS.video_list,1),1), []);
+    printFileList(side_file, side_char_list, []);
 else
     
-    printFileList(side_file, GUI_STATUS.video_list, GUI_STATUS.flip_function);
+    printFileList(side_file, GUI_STATUS.file_list, GUI_STATUS.flip_function);
 end
 
 
@@ -1607,7 +1648,7 @@ for i_files = 1:N_files
     if ischar(file_list)
         file_name = strtrim(file_list(i_files,:));
     elseif iscell(file_list)
-        file_name = strtrim(file_list{i_files});
+        file_name = file_list{i_files};
     end
     
     if ~isempty(pre_processing_fun)
