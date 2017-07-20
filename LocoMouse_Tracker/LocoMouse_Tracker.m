@@ -506,7 +506,7 @@ if cpp
     model = handles.model;
     CreateBackgroundImage = handles.CreateBackgroundImage.Value;
 
-    parfor i_files = 1:Nfiles
+    for i_files = 1:Nfiles
         file_name = char(strtrim(file_list{i_files}));
         successful_tracking(i_files) = track_MATLB_CPP(data, ...
                                                        model,...
