@@ -593,7 +593,7 @@ if ispc()
         'Locomouse.exe');
     
 else
-%     error('C++ algorithm are only supported in Windows at the moment.');
+%     error('C++ algorithms are only supported in Windows at the moment.');
 end
 
 if isstring(gui_status.flip) && strcmpi(gui_status.flip,'compute')
@@ -1276,7 +1276,7 @@ load(fullfile(p_boundingBoxFunctions,'BoundingBoxOptions.mat'),...
     'WeightSettings');
 
 bb_cmd_string = ComputeMouseBox_cmd_string{bb_choice};
-if length(WeightSettings) <= bb_choice
+if bb_choice <= length(WeightSettings)
     bb_weight = WeightSettings{bb_choice};
 else
     bb_weight = [];
