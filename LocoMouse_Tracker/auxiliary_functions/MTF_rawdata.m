@@ -1,4 +1,7 @@
-function [final_tracks,tracks_tail,data,debug] = MTF_rawdata(data, model,bb_choice)
+function [final_tracks,tracks_tail,data,debug] = MTF_rawdata(...
+    data,...
+    model,...
+    matlab_params)
 % MTF   Tracks a set of predefined (mouse) features over a given video.
 %
 % INPUT:
@@ -136,11 +139,7 @@ bdymasscenter = nan(N_frames,2); % [GF]
 
 %%% FIXME: No need to do this for every file. Better to pass the options as
 %%% an input argument [joaofayad]
-[p_boundingBoxFunctions, ~, ~]=fileparts(which('computeMouseBox')); % find the folder containing BoundingBoxOptions.mat
-load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'ComputeMouseBox_cmd_string','ComputeMouseBox_option'); % load bounding box option information
-disp(['Using bounding box option "',char(ComputeMouseBox_option(bb_choice)),'"']); 
-tcmd_string = strtrim(char(ComputeMouseBox_cmd_string(bb_choice)));
-disp(['(',tcmd_string,')']);
+disp(['(',matlab_params.bb_cmd_string,')']);
 flip = data.flip;
 
 parfor i_images = 1:N_frames
@@ -150,7 +149,7 @@ parfor i_images = 1:N_frames
     
     % To change bounding box computation, see READ_BEFORE_CHANGING_ANYTHING.m 
     % in ... \LocoMouse_Dev\LocoMouse_Tracker\boundingBoxFunctions  [DE]
-    [bounding_box(:,:,i_images),~,~] = Call_computeMouseBox(Iaux, split_line,tcmd_string); % Call_computeMouseBox executes eval(tcmd_string)
+    [bounding_box(:,:,i_images),~,~] = Call_computeMouseBox(Iaux, split_line,matlab_params.bb_cmd_string); % Call_computeMouseBox executes eval(tcmd_string)
     bdymasscenter(i_images,:) = computebdymass(I,split_line); % calculates the center of mass of the silhouette of the mouse [GF]
 end
 
@@ -201,12 +200,6 @@ else
     I_hist_origin = [];
 end
 
-
-%%% FIXME: This should not be loaded at every call as it is the same
-%%% setting for all the videos. Make it an input argument.
-% loading weight settings [DE]
-WS=load([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'WeightSettings');
-tweight =  WS.WeightSettings{bb_choice};
 
 % Looping over all the images
 % warning('for changed to FOR for debugging reasons. [DE]')
@@ -400,7 +393,7 @@ parfor i_images = 1:N_frames
                     X = OFFSET(1) + [0.3*bounding_box_dim(1) bounding_box_dim(1)];
                     Y = OFFSET(2)+ split_line + [0 bounding_box_dim(2)];
                     for tpaw = 1:4 %[Front Right, Hind Right, Front Left, Hind Left]
-                        weights(tpaw,:) = pawQuadrantWeights_Distance(tracks_bottom{i_point,i_images}(1,:),tracks_bottom{i_point,i_images}(2,:),X,Y,tweight(tpaw,:)); 
+                        weights(tpaw,:) = pawQuadrantWeights_Distance(tracks_bottom{i_point,i_images}(1,:),tracks_bottom{i_point,i_images}(2,:),X,Y,matlab_params.bb_weights(tpaw,:)); 
                     end
                     weights = weights';
                     
@@ -420,7 +413,7 @@ parfor i_images = 1:N_frames
                 if ~isempty(weights)
                     X = OFFSET(1) + [0 bounding_box_dim(1)];
                     Y = OFFSET(2)+ split_line + [0 bounding_box_dim(2)];
-                    weights(1,:) = pawQuadrantWeights_Distance(tracks_bottom{i_point,i_images}(1,:),tracks_bottom{i_point,i_images}(2,:),X,Y,tweight(5,:)); % snout
+                    weights(1,:) = pawQuadrantWeights_Distance(tracks_bottom{i_point,i_images}(1,:),tracks_bottom{i_point,i_images}(2,:),X,Y,matlab_params.bb_weights(5,:)); % snout
                     weights = weights';
                     valid_snout = weights > 0;
                     tracks_bottom{i_point,i_images} = tracks_bottom{i_point,i_images}(:,valid_snout);
@@ -522,7 +515,7 @@ for i_tracks = 1:N_pointlike_tracks
     tracks_joint2 = cell(1,N_frames);
     
     % Computing unary potentials:
-    for i_images = 1:N_frames
+    parfor i_images = 1:N_frames
         if M(i_tracks,i_images) <= size(tracks_bottom{i_point,i_images},2)
             % If there is bottom view candidate:
             candidates = all(bsxfun(@eq,tracks_joint{i_point,i_images}(1:2,:),tracks_bottom{i_point,i_images}(1:2,M(i_tracks,i_images))),1);

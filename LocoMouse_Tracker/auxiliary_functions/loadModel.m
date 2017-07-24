@@ -4,7 +4,7 @@ function handles = loadModel(full_file_path, handles)
     % Since there is no model file type we must check we have all the right
     % fields:
     if isfield(model,'model')
-        model =model.model;
+        model = model.model;
     end
     ModelFieldNames      = fieldnames(model);
     ExpectedModel        = [{'line'}  {'tail'} ; ...

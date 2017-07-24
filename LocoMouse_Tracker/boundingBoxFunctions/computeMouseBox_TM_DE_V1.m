@@ -54,7 +54,7 @@ function [box, CC, I_crop] = computeMouseBox_TM_DE_V1(I,split_line,threshold)
 % ------------------------------------------
 
 if ~exist('threshold','var')
-    threshold = [0.01 0.01]; % [side bottom]
+    threshold = [0.05 0.05]; % [side bottom]
 elseif length(threshold) == 1 % if only one threshold is set, 
     threshold = [threshold threshold]; % use same threshold for bottom and side view
 end

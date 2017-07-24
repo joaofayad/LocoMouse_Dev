@@ -74,43 +74,61 @@
                             0.5,	0.25,   0.3,	0.2,	0.85,	0.0,	0.7   ; ...     % HL paw
                             1,      0.5,    0.20,	NaN,	NaN,	NaN,	NaN];           % snout
 
-%% C++ Code:
-% C++ code is run by passing it a 'c++' string instead of a bounding box
-% command. This is checked by the tracking code and the c++ executable is
-% run. FIXME: Implement this properly in the GUI.
-% 
-% ComputeMouseBox_cmd_string{tON} should be
-% {{'c++','cpp_config_file_name.yml'}}
-%% [4] C++ Overground
-tON = tON+1; % don't edit
-ComputeMouseBox_option(tON) = {'C++ Overground'}; 
-ComputeMouseBox_cmd_string(tON) = {{'c++','config.yml'}};  
-
-%% [5] C++ Treadmill
-tON = tON+1; % don't edit
-ComputeMouseBox_option(tON) = {'C++ Treadmill'}; 
-ComputeMouseBox_cmd_string(tON) = {{'c++','config_tm.yml'}};
-
-%% [6] C++ Head Fixed
-tON = tON+1; % don't edit
-ComputeMouseBox_option(tON) = {'C++ Head Fixed'}; 
-ComputeMouseBox_cmd_string(tON) = {{'c++','config_hf.yml'}};
-
-%% [7] C++ Ladder
-tON = tON+1; % don't edit
-ComputeMouseBox_option(tON) = {'C++ Ladder'}; 
-ComputeMouseBox_cmd_string(tON) = {{'c++','config.yml'}};
-           
-%% [8] C++ Rotary Treadmill
-tON = tON+1; % don't edit
-ComputeMouseBox_option(tON) = {'C++ Rotary Treadmill'}; 
-ComputeMouseBox_cmd_string(tON) = {{'c++','config_rtm.yml'}};
-
-%% [9] MATLAB Reeler
+%% [4] MATLAB Reeler: Variation on the standard method for the reeler mice.
+% The tail algorithm for this method gives preference to the side view
+% instead of the bottom view.
 tON = tON + 1;
 ComputeMouseBox_option(tON) = {'MATLAB Reeler'};
 ComputeMouseBox_cmd_string(tON) = {'[bounding_box(:,:,1), cc, I_crop] =  computeMouseBox(Iaux,split_line);'};
 WeightSettings{tON} = weight_defaults;
+                        
+                        
+%% C++ Code:
+% C++ code is run by passing it a 'c++' string instead of a bounding box
+% command. This is checked by the tracking code and the c++ executable is
+% run.
+% 
+% ComputeMouseBox_cmd_string{tON} should be
+% {{'c++',mode,cpp_config_file_namel}}
+%
+% mode: is an integer passed as a string (e.g. '0') that determines what
+% version of the C++ algorithm to run. More information about the modes can
+% be found on the C++ documentation.
+%
+% cpp_config_file: Name of the yml config file for the cpp algorithm. These
+% files must lie inside "LocoMouse_Tracker/auxiliary_functions/cpp/".
+
+%% C++ Overground
+tON = tON+1; % don't edit
+ComputeMouseBox_option(tON) = {'C++ Overground'}; 
+ComputeMouseBox_cmd_string(tON) = {{'c++','0','config.yml'}};  
+
+%% C++ Treadmill
+tON = tON+1; % don't edit
+ComputeMouseBox_option(tON) = {'C++ Treadmill'}; 
+ComputeMouseBox_cmd_string(tON) = {{'c++','1','config_tm.yml'}};
+
+%% C++ Head Fixed
+tON = tON+1; % don't edit
+ComputeMouseBox_option(tON) = {'C++ Head Fixed'}; 
+ComputeMouseBox_cmd_string(tON) = {{'c++','1','config_hf.yml'}};
+
+%% C++ Ladder
+tON = tON+1; % don't edit
+ComputeMouseBox_option(tON) = {'C++ Ladder'}; 
+ComputeMouseBox_cmd_string(tON) = {{'c++','0','config.yml'}};
+           
+%% C++ Rotary Treadmill
+tON = tON+1; % don't edit
+ComputeMouseBox_option(tON) = {'C++ Rotary Treadmill'}; 
+ComputeMouseBox_cmd_string(tON) = {{'c++','1','config_rtm.yml'}};
+
+%% C++ IR Treadmill
+tON = tON+1; % don't edit
+ComputeMouseBox_option(tON) = {'C++ IR Treadmill'}; 
+ComputeMouseBox_cmd_string(tON) = {{'c++','2','config_tm.yml'}};
+
+
 %%
 save([p_boundingBoxFunctions,filesep,'BoundingBoxOptions.mat'],'ComputeMouseBox_option','ComputeMouseBox_cmd_string','WeightSettings')
 clear('ComputeMouseBox_option','ComputeMouseBox_cmd_string','WeightSettings','tON','ParameterSet','weight_defaults','p_boundingBoxFunctions');
