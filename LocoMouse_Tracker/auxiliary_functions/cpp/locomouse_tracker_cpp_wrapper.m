@@ -58,6 +58,7 @@ debug_file = fullfile(output_path,sprintf('debug_%s.yml',vid_name));
 delete(output_file);
 
 if exist(debug_file,'file')
+
     %
     %     debug = importLocoMouseYAML(debug_file);
     delete(debug_file);
@@ -66,6 +67,7 @@ end
 % else
 debug = [];
 % end
+
 
 function path = formatPathForCppCall(path)
 % Deals with the way windows paths and MATLAB strings can generate
