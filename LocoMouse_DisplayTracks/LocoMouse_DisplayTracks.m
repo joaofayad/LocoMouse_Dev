@@ -540,7 +540,6 @@ function menu_video_Callback(hObject, eventdata, handles)
 % hObject    handle to menu_video (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-fprintf('Not supported yet!\n')
 
 function menu_export_Callback(hObject, eventdata, handles)
 c_update_system_state = onCleanup(@()(displayImage([],[],handles)));
