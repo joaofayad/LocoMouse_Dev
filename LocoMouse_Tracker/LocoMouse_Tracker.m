@@ -476,7 +476,7 @@ if is_cpp
     % transfer to parfor.
     data = handles.data;
     
-    for i_files = 1:N_files
+    parfor i_files = 1:N_files
         file_name = char(strtrim(gui_status.file_list{i_files}));
         successful_tracking(i_files) = track_MATLAB_CPP(...
             data,...
@@ -592,8 +592,12 @@ if ispc()
         cpp_params.cpp_root_path,...
         'Locomouse.exe');
     
+elseif isunix()
+    cpp_params.cpp_binary = fullfile(...
+        cpp_params.cpp_root_path,...
+        'LocoMouse');
 else
-%     error('C++ algorithms are only supported in Windows at the moment.');
+    error('C++ algorithms are not supported on this platform.');
 end
 
 if isstring(gui_status.flip) && strcmpi(gui_status.flip,'compute')
@@ -1282,36 +1286,36 @@ else
     bb_weight = [];
 end
 
-% FIXME: CPP Is triggered by having a cell defining the background
-% method. This is a hack to comply with former design, but should be
-% redesigned to be less error prone and more flexible.
-is_cpp = iscell(bb_cmd_string);
-cpp_params = [];
-
-if is_cpp
-    % CPP parameters:
-    cpp_params.cpp_root_path = fullfile(...
-        handles.root_path,...
-        'auxiliary_functions',...
-        'cpp',...
-        filesep);
-    
-    cpp_params.config_file = fullfile(...
-        cpp_params.cpp_root_path,...
-        bb_cmd_string{3});
-    
-    cpp_params.cpp_mode = bb_cmd_string{2};
-    
-    if ispc()
-        cpp_params.cpp_binary = fullfile(...
-            cpp_params.cpp_root_path,...
-            'Locomouse.exe');
-        
-    else
-        warning('C++ algorithm are only supported in Windows at the moment.');
-    end
-  
-end
+% % FIXME: CPP Is triggered by having a cell defining the background
+% % method. This is a hack to comply with former design, but should be
+% % redesigned to be less error prone and more flexible.
+% is_cpp = iscell(bb_cmd_string);
+% cpp_params = [];
+% 
+% % if is_cpp
+% %     % CPP parameters:
+% %     cpp_params.cpp_root_path = fullfile(...
+% %         handles.root_path,...
+% %         'auxiliary_functions',...
+% %         'cpp',...
+% %         filesep);
+% %     
+% %     cpp_params.config_file = fullfile(...
+% %         cpp_params.cpp_root_path,...
+% %         bb_cmd_string{3});
+% %     
+% %     cpp_params.cpp_mode = bb_cmd_string{2};
+% %     
+% %     if ispc()
+% %         cpp_params.cpp_binary = fullfile(...
+% %             cpp_params.cpp_root_path,...
+% %             'Locomouse.exe');
+% %         
+% %     else
+% %         warning('C++ algorithm are only supported in Windows at the moment.');
+% %     end
+% %   
+% % end
 
 
 % === Reading the GUI options:
