@@ -1,0 +1,55 @@
+%YAML:1.0
+#LocoMouse configuration file: Erroneous input will crash the program!
+parameters_for_visual_debug: 0 # Parameters to visualize the tracking process (MATLAB)
+location_prior: !!opencv-matrix
+   rows: 5
+   cols: 7
+   dt: d
+   data: [1, 1, 0.6, 0, 1, 0, 1,
+      0, 1, 0.6, 0, 1, 0, 1,
+      1, 0, 0.6, 0, 1, 0, 1,
+      0, 0, 0.6, 0, 1, 0, 1,
+      1, 0.5, 0.2, 0, 1, 0, 1]
+use_provided_bounding_box: 1 #0: false, 1: true
+# [x, y, w, h] after correcting distortion and flipping. Absolute image coordinates. 
+bounding_box_side: !!opencv-matrix
+   rows: 1
+   cols: 4
+   dt: i
+   data: [59, 0, 300, 30]
+bounding_box_bottom: !!opencv-matrix
+   rows: 1
+   cols: 4
+   dt: i
+   data: [59, 129, 300, 120]
+# Alogrithm parameters: Don't change unless certain of what they do.
+#Spacing of the grid max pixel displacement, etc.
+conn_comp_connectivity: 8 #Connectivity for the Connected components algorithm.
+median_filter_size: 11 #Must be an odd integer.
+min_pixel_visible: 0 #Minimum number of visible pixels to consider a valid BB boundary.
+top_bottom_min_overlap: 0.7 #Boxes must overlap for at least 70% for matches to be considered valid.
+maximum_normalized_beacon_distance: 0.4 #Candidates with normalized distance lower than this are suppressed.
+max_displacement: 15 #Maximum displacement in pixels allowed between two frames.
+max_displacement_top: 15 # Same as above, for the top view.
+occlusion_grid_spacing_pixels: 20 #Spacing of the occlusion grid in pixels, highly dependent on resolution.
+occlusion_grid_spacing_pixels_top: 20 # Same as above, for the top view.
+body_proportion_bounding_box: 0.75 #The occlusion grid extends for only this percentage of the BB on the right side.
+tail_sub_bounding_box: 0.6 #The percentage counting from the left of the box where the tail is looked for.
+alpha_vel: 0.1 #Relative term for the velocity costs on the match2nd tracking algorithm.
+alpha_vel_top: 100 #Same as above, for the top
+pairwise_occluded_cost: 0.01 #Cost for moving to and between occluded points on the match2nd algorithm.
+moving_average_window: 5 #Must be odd.
+# Pre-processing of the images before detection: Either provide a reference image to match the histogram or a gray-levle mapping.
+use_reference_image: 1 #0: false, 1: true
+reference_image_path: 'I_TEMPLATE_BOTTOM.png' #If it can't be read the program will halt. 
+#
+transform_gray_values: 0 #0: false, 1: true
+gray_value_transformation: !!opencv-matrix
+   rows: 1
+   cols: 256
+   dt: u
+   data: [3, 3, 7, 10, 12, 15, 18, 20, 21, 23, 25, 28, 30, 31, 33, 35, 38, 40, 42, 44, 46, 49, 52, 54, 57, 60, 62, 64, 67, 71, 73, 75, 77, 81, 83, 86, 88, 91, 93, 96, 98, 100, 102, 103, 106, 108, 109, 111, 114, 115, 116, 117, 119, 120, 123, 124, 125, 125, 127, 128, 129, 131, 132, 134, 135, 137, 138, 139, 140, 141, 142, 144, 145, 146, 147, 148, 149, 150, 150, 151, 152, 155, 155, 156, 156, 157, 158, 159, 160, 161, 162, 163, 164, 164, 166, 167, 167, 168, 169, 170, 171, 172, 173, 174, 176, 176, 177, 178, 179, 180, 180, 181, 181, 182, 183, 184, 185, 187, 188, 190, 190, 192, 193, 194, 195, 196, 198, 200, 200, 201, 202, 203, 204, 204, 205, 206, 208, 209, 210, 211, 213, 214, 216, 217, 219, 220, 221, 222, 223, 224, 225, 226, 229, 231, 233, 235, 238, 241, 241, 241, 242, 244, 244, 247, 249, 251, 251, 251, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 254, 254, 254, 254, 254, 254, 254, 254, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]
+#
+# Debuggin Tracker code: Set these parameters to get verbose prints of internal states of the program as well a yml file with intermediate stages of image processing.
+verbose_debug: 1 # set to 1 to generate txt and yml files with debug variables.
+N_debug_frames: 0 # N_debug_frames > 0 caps the number of frames. 0 runs with all frames. 
