@@ -23,7 +23,7 @@ end
 
 if char_flip == 'L'
     data.flip = true;
-elseif char_flip == 'R'I
+elseif char_flip == 'R'
     data.flip = false;
 else
     error('Flip character is neither L nor R (found: %c)',char_flip);

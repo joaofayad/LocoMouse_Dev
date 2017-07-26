@@ -115,30 +115,6 @@ classdef (Sealed) LocoMouse_GUI < handle
             compute =  gui.compute;
         end
         
-    end
-    
-    methods (Access = protected)
-        
-        validateDirStructure(gui)
-        
-        validateVideoReader(gui)
-        
-        createLayout(gui)
-        
-        %createMenus(gui)
-        
-        populateOptions(gui)
-        
-        loadRecoverySettings(gui)
-        
-        waitForProcess(gui,state)
-        
-        saveSettings(gui, file_name)
-        
-        loadSettings(gui, file_name)
-       
-        track(gui)
-        
         function [] = ErrorMsg(gui, MException_var, error_template, error_contents)
             % Prevents GUI from crashing, displaying error messages.
             % MException_var: error info returned by catch
@@ -160,19 +136,43 @@ classdef (Sealed) LocoMouse_GUI < handle
         
         
     end
+    
+    methods (Access = protected)
+        
+        validateDirStructure(gui)
+        
+        validateVideoReader(gui)
+        
+        createLayout(gui)
+        
+        %createMenus(gui)
+        
+        populateOptions(gui)
+        
+        loadRecoverySettings(gui)
+        
+        waitForProcess(gui,state)
+        
+        saveSettings(gui, file_name)
+        
+        loadSettings(gui, file_name)
+        
+        track(gui)
+        
+    end
 end
 
 
 function [] = closeGUI(~, ~, gui)
-    try 
-        gui.saveSettings(fullfile(gui.settings_path,'GUI_Recovery_Settings_v2.mat'));
-    catch error_close_gui
-        gui.ErrorMsg(error_close_gui,'Error closing GUI, could not save settings.',[]);
-    end
-    
-    delete(gui.Window);
-    gui.delete();
-    clear gui
+try
+    gui.saveSettings(fullfile(gui.settings_path,'GUI_Recovery_Settings_v2.mat'));
+catch error_close_gui
+    gui.ErrorMsg(error_close_gui,'Error closing GUI, could not save settings.',[]);
+end
+
+delete(gui.Window);
+gui.delete();
+clear gui
 end
 
 
