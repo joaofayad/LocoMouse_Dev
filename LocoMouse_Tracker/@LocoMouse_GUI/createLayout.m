@@ -33,11 +33,7 @@ function [] = createLayout(gui)
         gui.layout.settings_grid.Spacing * (N_subcolumns-1) + ...
         gui.layout.settings.Padding*2;
     
-    
-    
     gui.layout.main.Widths = [adjusted_first_column_width -1];
-    
-    gui.layout
 
     % Create Window Menus:
     createMenus();
@@ -166,7 +162,7 @@ function [] = createLayout(gui)
         %%% location to initialize all this and resize as needed.
         gui.populateOptions();
         
-        if isunix
+        if isunix() && ~ismac()
             % To avoid clipping strings we must compute the correct width
             % of the boxes
                         
@@ -269,6 +265,8 @@ function [] = createLayout(gui)
                 1- gui.toggle_startstop.Position(2);
             
         end
+        
+        gui.populateOptions();
         
     end
     

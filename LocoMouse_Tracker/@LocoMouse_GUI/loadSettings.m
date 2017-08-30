@@ -3,24 +3,10 @@ function [] = loadSettings(gui, file_name)
     %
     % Original Author: Dennis Eckmeier
     % Modified by: Joao Fayad (joaofayad@gmail.com)
-        
-%     if isempty(file_name)
-%         [L_filename, L_path] = uigetfile(fullfile(gui.settings_path,'*.mat'));
-%         
-%         L_filename = fullfile(L_path, L_filename);
-%         
-%     else
-%         L_filename = file_name;
-%     end
-%     
-%     if ~ischar(L_filename)
-%         return;
-%     end
     
     if ~exist(file_name, 'file')
         error('Could not load %s, file does not exist.',file_name);
     end
-
 
     load(file_name,'t_values');
     
